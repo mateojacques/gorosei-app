@@ -2,6 +2,14 @@ export const esAR = {
   "app.name": "Gorosei",
   "common.error": "Algo salió mal. Probá de nuevo en unos minutos.",
 
+  "site.nav": "Cuenta",
+  "site.signIn": "Ingresar",
+  "site.linkRiot": "Vinculá Riot",
+  "site.myProfile": "Mi perfil",
+  "site.privacy": "Política de privacidad",
+  "site.riotNotice":
+    "Gorosei isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.",
+
   "rank.unranked": "Sin clasificar",
   "rank.tier.IRON": "Hierro",
   "rank.tier.BRONZE": "Bronce",
