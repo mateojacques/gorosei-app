@@ -1,1 +1,53 @@
 @import "tailwindcss";
+@import "@fontsource/big-shoulders-display/latin-800.css";
+@import "@fontsource/big-shoulders-display/latin-900.css";
+@import "@fontsource/hanken-grotesk/latin-400.css";
+@import "@fontsource/hanken-grotesk/latin-600.css";
+@import "@fontsource/hanken-grotesk/latin-700.css";
+
+/* "En vivo": the broadcast at night. Dark only; every color is tinted toward cobalt (hue 230). */
+@theme {
+  --color-surface: oklch(0.14 0.012 230);
+  --color-surface-raised: oklch(0.18 0.016 230);
+  --color-line: oklch(0.3 0.02 230);
+  --color-ink: oklch(0.96 0.005 230);
+  --color-ink-muted: oklch(0.72 0.015 230);
+  --color-cobalt: oklch(0.5 0.13 230);
+  --color-cobalt-light: oklch(0.78 0.12 230);
+  --color-signal: oklch(0.58 0.22 27);
+  --color-signal-hover: oklch(0.52 0.21 27);
+
+  --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --font-body: "Hanken Grotesk", system-ui, sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-cobalt-light);
+    outline-offset: 3px;
+  }
+}
