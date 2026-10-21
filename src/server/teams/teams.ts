@@ -15,6 +15,7 @@ import {
   tournaments,
 } from "../db/schema";
 import { getCurrentRank } from "../identity/ranks";
+import { lockTournament, recomputeConfirmations } from "../tournaments/confirmations";
 
 export type TeamRequest = {
   id: string;
@@ -80,19 +81,24 @@ async function hasPendingRequest(db: Executor, teamId: string, userId: string): 
  * dropped from the team's unconfirmed (pending or waitlisted) rosters. Tournaments that are over hold no one.
  */
 async function releaseFromRosters(tx: Executor, teamId: string, userId: string): Promise<"on_confirmed_roster" | string[]> {
-  const rows = await tx
-    .select({ registrationId: registrations.id, status: registrations.status })
-    .from(registrationPlayers)
-    .innerJoin(registrations, eq(registrations.id, registrationPlayers.registrationId))
-    .innerJoin(tournaments, eq(tournaments.id, registrations.tournamentId))
-    .where(
-      and(
-        eq(registrations.teamId, teamId),
-        eq(registrationPlayers.userId, userId),
-        eq(registrationPlayers.active, true),
-        notInArray(tournaments.status, ["finished", "cancelled"]),
-      ),
-    );
+  const rosterRows = () =>
+    tx
+      .select({ registrationId: registrations.id, tournamentId: registrations.tournamentId, status: registrations.status })
+      .from(registrationPlayers)
+      .innerJoin(registrations, eq(registrations.id, registrationPlayers.registrationId))
+      .innerJoin(tournaments, eq(tournaments.id, registrations.tournamentId))
+      .where(
+        and(
+          eq(registrations.teamId, teamId),
+          eq(registrationPlayers.userId, userId),
+          eq(registrationPlayers.active, true),
+          notInArray(tournaments.status, ["finished", "cancelled"]),
+        ),
+      );
+  // Statuses change under the tournament lock, so lock the tournaments (in a stable order) before reading them.
+  const tournamentIds = [...new Set((await rosterRows()).map((r) => r.tournamentId))].sort();
+  for (const id of tournamentIds) await lockTournament(tx, id);
+  const rows = await rosterRows();
   if (rows.some((r) => r.status === "confirmed")) return "on_confirmed_roster";
   const registrationIds = rows.map((r) => r.registrationId);
   if (registrationIds.length > 0) {
@@ -100,6 +106,7 @@ async function releaseFromRosters(tx: Executor, teamId: string, userId: string):
       .delete(registrationPlayers)
       .where(and(inArray(registrationPlayers.registrationId, registrationIds), eq(registrationPlayers.userId, userId)));
   }
+  for (const id of tournamentIds) await recomputeConfirmations(tx, id, new Date());
   return registrationIds;
 }
 

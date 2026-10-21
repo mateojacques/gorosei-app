@@ -4,6 +4,7 @@ import type { TournamentInput } from "../../shared/tournament";
 import { writeAudit } from "../audit";
 import type { Db } from "../db/client";
 import { tournaments } from "../db/schema";
+import { recomputeConfirmations } from "./confirmations";
 
 export type Tournament = typeof tournaments.$inferSelect;
 
@@ -59,6 +60,8 @@ export async function updateTournament(
       entityId: id,
       data: { before: current, after: input },
     });
+    // A new cap, fee or rule set can move registrations between confirmed, waitlisted and pending.
+    await recomputeConfirmations(tx, id, new Date());
     return { ok: true } as const;
   });
 }

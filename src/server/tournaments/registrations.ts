@@ -9,6 +9,7 @@ import { uniqueViolation } from "../db/client";
 import type { Db, Executor } from "../db/client";
 import {
   eligibilityExceptions,
+  entryPayments,
   rankSnapshots,
   registrationPlayers,
   registrations,
@@ -20,6 +21,7 @@ import {
 import { getEffectiveRank, recordRankSnapshot } from "../identity/ranks";
 import type { RankSource } from "../identity/ranks";
 import type { RiotClient } from "../riot/types";
+import { lockTournament, paidUserIds, recomputeConfirmations, rosterQualifies } from "./confirmations";
 import type { Tournament } from "./tournaments";
 
 export type RegistrationDeps = { db: Db; riot: RiotClient; now?: () => Date };
@@ -220,7 +222,7 @@ export async function registerTeam(
       const [locked] = await tx.select().from(teams).where(eq(teams.id, teamId)).for("update");
       if (!locked || locked.captainUserId !== captainId) return { ok: false, reason: "not_captain" };
       if (!(await allMembers(tx, teamId, userIds))) return { ok: false, reason: "player_not_member" };
-      const [current] = await tx.select({ status: tournaments.status }).from(tournaments).where(eq(tournaments.id, tournamentId));
+      const current = await lockTournament(tx, tournamentId);
       if (current!.status !== "registration_open") return { ok: false, reason: "registration_closed" };
 
       const [registration] = await tx
@@ -247,6 +249,7 @@ export async function registerTeam(
         entityId: registrationId,
         data: { tournamentId, teamId, starters: roster.starters, subs: roster.subs },
       });
+      await recomputeConfirmations(tx, tournamentId, new Date());
       return { ok: true, registrationId };
     });
   } catch (error) {
@@ -281,10 +284,6 @@ export async function updateRoster(
   if (isLocked(registration, tournament)) return { ok: false, reason: "locked" };
   const shape = rosterShape(tournament, roster);
   if (shape) return { ok: false, reason: shape };
-  // Payment-based confirmation is checked in Task 5; here a confirmed roster must stay full.
-  if (registration.status === "confirmed" && roster.starters.length < ROSTER_STARTERS) {
-    return { ok: false, reason: "would_unconfirm" };
-  }
   const userIds = [...roster.starters, ...roster.subs];
   if (!(await allMembers(db, registration.teamId, userIds))) return { ok: false, reason: "player_not_member" };
   if (await onOtherRoster(db, tournament.id, userIds, registrationId)) {
@@ -312,10 +311,22 @@ export async function updateRoster(
   try {
     return await db.transaction(async (tx): Promise<RosterResult> => {
       await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, registration.teamId)).for("update");
+      const current = await lockTournament(tx, tournament.id);
       const [locked] = await tx.select().from(registrations).where(eq(registrations.id, registrationId)).for("update");
-      const [current] = await tx.select({ status: tournaments.status }).from(tournaments).where(eq(tournaments.id, tournament.id));
       if (isLocked(locked!, current!)) return { ok: false, reason: "locked" };
       if (!(await allMembers(tx, registration.teamId, userIds))) return { ok: false, reason: "player_not_member" };
+      // A confirmed team's change must keep it confirmed: full, eligible and paid.
+      if (
+        locked!.status === "confirmed" &&
+        !rosterQualifies(
+          current!,
+          toEntries(roster, snapshots),
+          await exemptRuleIdsFor(tx, tournament.id, registration.teamId),
+          await paidUserIds(tx, tournament.id),
+        )
+      ) {
+        return { ok: false, reason: "would_unconfirm" };
+      }
 
       const before = await tx
         .select({ userId: registrationPlayers.userId })
@@ -359,6 +370,7 @@ export async function updateRoster(
           removed,
         },
       });
+      await recomputeConfirmations(tx, tournament.id, new Date());
       return { ok: true, registrationId };
     });
   } catch (error) {
@@ -372,14 +384,41 @@ export async function withdrawRegistration(
   registrationId: string,
 ): Promise<{ ok: true } | { ok: false; reason: "not_captain" | "locked" }> {
   return db.transaction(async (tx) => {
+    const [found] = await tx
+      .select({ tournamentId: registrations.tournamentId })
+      .from(registrations)
+      .where(eq(registrations.id, registrationId));
+    if (!found) return { ok: false, reason: "not_captain" } as const;
+    await lockTournament(tx, found.tournamentId);
     await tx.select({ id: registrations.id }).from(registrations).where(eq(registrations.id, registrationId)).for("update");
     const loaded = await loadRegistration(tx, registrationId);
     if (!loaded || loaded.captainUserId !== captainId) return { ok: false, reason: "not_captain" } as const;
     if (isLocked(loaded.registration, loaded.tournament)) return { ok: false, reason: "locked" } as const;
 
+    if (loaded.registration.status === "confirmed") {
+      // A confirmed team that withdraws gets no refund or credit: its roster's payments are forfeited.
+      const roster = await tx
+        .select({ userId: registrationPlayers.userId })
+        .from(registrationPlayers)
+        .where(eq(registrationPlayers.registrationId, registrationId));
+      if (roster.length > 0) {
+        await tx
+          .update(entryPayments)
+          .set({ forfeited: true })
+          .where(
+            and(
+              eq(entryPayments.tournamentId, found.tournamentId),
+              inArray(
+                entryPayments.userId,
+                roster.map((r) => r.userId),
+              ),
+            ),
+          );
+      }
+    }
     await tx
       .update(registrations)
-      .set({ status: "withdrawn", updatedAt: new Date() })
+      .set({ status: "withdrawn", qualifiedAt: null, updatedAt: new Date() })
       .where(eq(registrations.id, registrationId));
     await tx.update(registrationPlayers).set({ active: false }).where(eq(registrationPlayers.registrationId, registrationId));
     await writeAudit(tx, {
@@ -389,6 +428,7 @@ export async function withdrawRegistration(
       entityId: registrationId,
       data: { from: loaded.registration.status },
     });
+    await recomputeConfirmations(tx, found.tournamentId, new Date());
     return { ok: true } as const;
   });
 }
@@ -418,12 +458,12 @@ async function buildViews(db: Db, tournament: Tournament, rows: RegistrationRow[
     .select({ teamId: eligibilityExceptions.teamId, ruleId: eligibilityExceptions.ruleId })
     .from(eligibilityExceptions)
     .where(eq(eligibilityExceptions.tournamentId, tournament.id));
+  const paid = await paidUserIds(db, tournament.id);
 
   return rows.map(({ registration, team }) => {
-    // Paid is always false until payments exist.
     const roster = players
       .filter((p) => p.registrationId === registration.id)
-      .map((p) => ({ ...p.snapshot, isSub: p.isSub, paid: false }))
+      .map((p) => ({ ...p.snapshot, isSub: p.isSub, paid: paid.has(p.userId) }))
       .sort((a, b) => Number(a.isSub) - Number(b.isSub) || a.riotId.localeCompare(b.riotId));
     const exempt = exceptions.filter((e) => e.teamId === team.id).map((e) => e.ruleId);
     return {

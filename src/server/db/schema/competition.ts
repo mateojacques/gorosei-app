@@ -100,6 +100,8 @@ export const registrations = pgTable(
       .notNull()
       .references(() => teams.id),
     status: text("status").$type<RegistrationStatus>().notNull().default("pending"),
+    // When the registration last started qualifying (full, eligible, paid); orders cap slots and the waitlist.
+    qualifiedAt: tz("qualified_at"),
     createdAt: tz("created_at").notNull().defaultNow(),
     updatedAt: tz("updated_at").notNull().defaultNow(),
   },
@@ -156,4 +158,27 @@ export const eligibilityExceptions = pgTable(
     grantedAt: tz("granted_at").notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.tournamentId, t.teamId, t.ruleId] })],
+);
+
+export const entryPayments = pgTable(
+  "entry_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tournamentId: uuid("tournament_id")
+      .notNull()
+      .references(() => tournaments.id),
+    // Attached to the tournament, not to a roster: a player keeps their payment when moving between teams.
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    source: text("source").$type<"payment" | "credit">().notNull(),
+    reference: text("reference").notNull(),
+    creditId: uuid("credit_id"),
+    forfeited: boolean("forfeited").notNull().default(false),
+    recordedBy: text("recorded_by")
+      .notNull()
+      .references(() => user.id),
+    recordedAt: tz("recorded_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("entry_payments_tournament_user_idx").on(t.tournamentId, t.userId)],
 );

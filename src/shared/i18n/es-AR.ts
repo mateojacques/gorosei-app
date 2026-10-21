@@ -188,4 +188,6 @@ export const esAR = {
   "registration.error.locked": "El roster ya no se puede cambiar.",
   "registration.error.would_unconfirm": "Ese cambio dejaría a tu equipo sin confirmar.",
   "registration.error.ineligible": "El roster no cumple las reglas de elegibilidad del torneo.",
+  "registration.error.not_found": "No encontramos esa inscripción.",
+  "payment.error.not_paid": "Ese jugador no tiene un pago registrado en este torneo.",
 } as const;
