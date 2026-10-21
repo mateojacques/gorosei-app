@@ -15,7 +15,7 @@ export const Route = createFileRoute("/ingresar")({
   component: SignInPage,
 });
 
-const AFTER_SIGN_IN = "/";
+const AFTER_SIGN_IN = "/vincular-riot";
 
 function SignInPage() {
   const { discord } = Route.useLoaderData();

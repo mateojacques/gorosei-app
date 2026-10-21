@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as IngresarRouteImport } from './routes/ingresar'
+import { Route as VincularRiotRouteImport } from './routes/vincular-riot'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const IngresarRoute = IngresarRouteImport.update({
   path: '/ingresar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VincularRiotRoute = VincularRiotRouteImport.update({
+  id: '/vincular-riot',
+  path: '/vincular-riot',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: '/api/$',
   path: '/api/$',
@@ -32,30 +38,34 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
+  '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
+  '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
+  '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ingresar' | '/api/$'
+  fullPaths: '/' | '/ingresar' | '/vincular-riot' | '/api/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ingresar' | '/api/$'
-  id: '__root__' | '/' | '/ingresar' | '/api/$'
+  to: '/' | '/ingresar' | '/vincular-riot' | '/api/$'
+  id: '__root__' | '/' | '/ingresar' | '/vincular-riot' | '/api/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   IngresarRoute: typeof IngresarRoute
+  VincularRiotRoute: typeof VincularRiotRoute
   ApiSplatRoute: typeof ApiSplatRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IngresarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vincular-riot': {
+      id: '/vincular-riot'
+      path: '/vincular-riot'
+      fullPath: '/vincular-riot'
+      preLoaderRoute: typeof VincularRiotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/$': {
       id: '/api/$'
       path: '/api/$'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   IngresarRoute: IngresarRoute,
+  VincularRiotRoute: VincularRiotRoute,
   ApiSplatRoute: ApiSplatRoute,
 }
 export const routeTree = rootRouteImport

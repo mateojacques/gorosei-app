@@ -17,3 +17,8 @@ export async function resetTestDb(): Promise<void> {
   await migrated;
   await testDb.execute(sql.raw(`TRUNCATE ${tableNames.join(", ")} RESTART IDENTITY CASCADE`));
 }
+
+export async function createTestUser(id: string): Promise<string> {
+  await testDb.insert(schema.user).values({ id, name: id, email: `${id}@test.local` });
+  return id;
+}
