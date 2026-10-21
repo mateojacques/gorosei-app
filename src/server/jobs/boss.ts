@@ -2,10 +2,13 @@ import { PgBoss } from "pg-boss";
 import { db } from "../db/client";
 import { env } from "../env";
 import { riot } from "../riot";
+import { closeDueRegistrations } from "./close-registrations";
 import { pollAllRanks } from "./poll-ranks";
 
 const POLL_RANKS = "poll-ranks";
 const EVERY_SIX_HOURS = "0 */6 * * *";
+const CLOSE_REGISTRATIONS = "close-registrations";
+const EVERY_MINUTE = "* * * * *";
 
 export async function registerJobs(boss: PgBoss): Promise<void> {
   await boss.createQueue(POLL_RANKS);
@@ -13,6 +16,12 @@ export async function registerJobs(boss: PgBoss): Promise<void> {
   await boss.work(POLL_RANKS, async () => {
     const result = await pollAllRanks({ db, riot });
     console.info(`[jobs] ${POLL_RANKS}: polled ${result.polled}, failed ${result.failed}`);
+  });
+  await boss.createQueue(CLOSE_REGISTRATIONS);
+  await boss.schedule(CLOSE_REGISTRATIONS, EVERY_MINUTE);
+  await boss.work(CLOSE_REGISTRATIONS, async () => {
+    const result = await closeDueRegistrations(db, new Date());
+    console.info(`[jobs] ${CLOSE_REGISTRATIONS}: closed ${result.closed}`);
   });
 }
 

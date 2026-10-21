@@ -173,7 +173,7 @@ export const entryPayments = pgTable(
       .references(() => user.id),
     source: text("source").$type<"payment" | "credit">().notNull(),
     reference: text("reference").notNull(),
-    creditId: uuid("credit_id"),
+    creditId: uuid("credit_id").references(() => entryCredits.id),
     forfeited: boolean("forfeited").notNull().default(false),
     recordedBy: text("recorded_by")
       .notNull()
@@ -181,4 +181,25 @@ export const entryPayments = pgTable(
     recordedAt: tz("recorded_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("entry_payments_tournament_user_idx").on(t.tournamentId, t.userId)],
+);
+
+export const entryCredits = pgTable(
+  "entry_credits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    // The tournament whose payment became this credit; null for manual credits.
+    sourceTournamentId: uuid("source_tournament_id").references(() => tournaments.id),
+    reason: text("reason").$type<"unconfirmed" | "waitlisted" | "cancelled" | "manual">().notNull(),
+    status: text("status").$type<"available" | "used" | "revoked">().notNull().default("available"),
+    // The payment this credit paid for while it is used.
+    usedPaymentId: uuid("used_payment_id"),
+    note: text("note").notNull().default(""),
+    createdBy: text("created_by").references(() => user.id),
+    createdAt: tz("created_at").notNull().defaultNow(),
+  },
+  // At most one credit per player per source tournament; null sources (manual credits) never conflict.
+  (t) => [uniqueIndex("entry_credits_user_source_idx").on(t.userId, t.sourceTournamentId)],
 );

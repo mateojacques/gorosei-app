@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
-import { auditLog, entryPayments, registrationPlayers, registrations } from "../../../src/server/db/schema";
+import { auditLog, entryPayments, registrationPlayers, registrations, tournaments } from "../../../src/server/db/schema";
 import { leaveTeam } from "../../../src/server/teams/teams";
 import {
   forceRemoveRegistration,
@@ -289,4 +289,15 @@ test("a player leaving a waitlisted roster sends it back to pending", async () =
 
   expect(await leaveTeam(testDb, "b2", b.team.id)).toEqual({ ok: true });
   expect(await statusOf(b.registrationId)).toBe("pending");
+});
+
+test("payments can only be marked or unmarked while registration is open or closed", async () => {
+  const tournament = await openTournament();
+  const { ids } = await registered(tournament.id, "p");
+  await markPaid(testDb, admin, tournament.id, [ids[0]!], "MP");
+  await testDb.update(tournaments).set({ status: "cancelled" }).where(eq(tournaments.id, tournament.id));
+
+  expect(await markPaid(testDb, admin, tournament.id, [ids[1]!], "MP")).toEqual({ ok: false, reason: "invalid_state" });
+  expect(await unmarkPaid(testDb, admin, tournament.id, ids[0]!)).toEqual({ ok: false, reason: "invalid_state" });
+  expect(await testDb.select().from(entryPayments).where(eq(entryPayments.tournamentId, tournament.id))).toHaveLength(1);
 });

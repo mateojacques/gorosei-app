@@ -43,6 +43,13 @@
       "when": 1792624739424,
       "tag": "0005_famous_zodiak",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792625315819,
+      "tag": "0006_fancy_starbolt",
+      "breakpoints": true
     }
   ]
 }
