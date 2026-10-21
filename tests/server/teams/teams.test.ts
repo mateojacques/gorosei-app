@@ -1,0 +1,149 @@
+import { beforeEach, expect, test } from "bun:test";
+import { and, eq } from "drizzle-orm";
+import { auditLog, teamMembers, teams } from "../../../src/server/db/schema";
+import {
+  createTeam,
+  getTeamBySlug,
+  inviteByRiotId,
+  leaveTeam,
+  listPendingRequestsForTeam,
+  listPendingRequestsForUser,
+  removeMember,
+  requestToJoin,
+  respondToRequest,
+  transferCaptain,
+} from "../../../src/server/teams/teams";
+import { createTestTeam, linkedPlayer } from "../../helpers/competition";
+import { createTestRiotAccount, createTestUser, resetTestDb, testDb } from "../../helpers/db";
+
+beforeEach(resetTestDb);
+
+test("creating a team requires a linked Riot account", async () => {
+  await createTestUser("nolink");
+  expect(await createTeam(testDb, "nolink", { name: "Pibes", tag: "PBS" })).toEqual({ ok: false, reason: "riot_required" });
+
+  await linkedPlayer("cap");
+  const created = await createTeam(testDb, "cap", { name: "Pibes", tag: "PBS" });
+  expect(created).toMatchObject({ ok: true, slug: "pibes" });
+  if (!created.ok) return;
+  const [member] = await testDb.select().from(teamMembers).where(eq(teamMembers.teamId, created.teamId));
+  expect(member).toMatchObject({ userId: "cap", role: "captain" });
+  const audit = await testDb.select().from(auditLog).where(eq(auditLog.action, "team.created"));
+  expect(audit).toHaveLength(1);
+});
+
+test("team names are unique case-insensitively and tags are uppercased", async () => {
+  await linkedPlayer("a");
+  await linkedPlayer("b");
+  expect((await createTeam(testDb, "a", { name: "Pibes", tag: "pbs" })).ok).toBe(true);
+  const [row] = await testDb.select().from(teams);
+  expect(row!.tag).toBe("PBS");
+  expect(await createTeam(testDb, "b", { name: "pibes", tag: "XYZ" })).toEqual({ ok: false, reason: "name_taken" });
+  expect(await createTeam(testDb, "b", { name: "Otros", tag: "Pbs" })).toEqual({ ok: false, reason: "tag_taken" });
+  expect(await createTeam(testDb, "b", { name: "  ab ", tag: "XYZ" })).toEqual({ ok: false, reason: "invalid_name" });
+  expect(await createTeam(testDb, "b", { name: "Otros", tag: "X" })).toEqual({ ok: false, reason: "invalid_tag" });
+  expect(await createTeam(testDb, "b", { name: "Otros", tag: "ABCDEF" })).toEqual({ ok: false, reason: "invalid_tag" });
+  expect(await createTeam(testDb, "b", { name: "Otros", tag: "A-B" })).toEqual({ ok: false, reason: "invalid_tag" });
+});
+
+test("symbol-only names get a fallback slug and collisions get suffixes", async () => {
+  await linkedPlayer("a");
+  await linkedPlayer("b");
+  const first = await createTeam(testDb, "a", { name: "!!!", tag: "AA" });
+  const second = await createTeam(testDb, "b", { name: "???", tag: "BB" });
+  expect(first).toMatchObject({ ok: true, slug: "equipo" });
+  expect(second).toMatchObject({ ok: true, slug: "equipo-2" });
+});
+
+test("inviting by Riot ID finds the player case-insensitively", async () => {
+  await linkedPlayer("cap");
+  await createTestRiotAccount("senor", { puuid: "p-senor", gameName: "Señor Café", tagLine: "LAS" });
+  const team = await createTestTeam("cap");
+
+  expect(await inviteByRiotId(testDb, "senor", team.id, "x#LAS")).toEqual({ ok: false, reason: "not_captain" });
+  expect(await inviteByRiotId(testDb, "cap", team.id, "sin tag")).toEqual({ ok: false, reason: "invalid_riot_id" });
+  expect(await inviteByRiotId(testDb, "cap", team.id, "nadie#LAS")).toEqual({ ok: false, reason: "player_not_found" });
+  expect(await inviteByRiotId(testDb, "cap", team.id, "cap#LAS")).toEqual({ ok: false, reason: "already_member" });
+
+  const invite = await inviteByRiotId(testDb, "cap", team.id, "señor café#las");
+  expect(invite.ok).toBe(true);
+  expect(await inviteByRiotId(testDb, "cap", team.id, "Señor Café#LAS")).toEqual({ ok: false, reason: "already_pending" });
+  const pending = await listPendingRequestsForUser(testDb, "senor");
+  expect(pending.invites).toHaveLength(1);
+  expect(pending.invites[0]).toMatchObject({ teamSlug: team.slug, kind: "invite", status: "pending" });
+});
+
+test("accepting an invite adds the member; only the invited user can answer it", async () => {
+  await linkedPlayer("cap");
+  await linkedPlayer("guest");
+  const team = await createTestTeam("cap");
+  const invite = await inviteByRiotId(testDb, "cap", team.id, "guest#LAS");
+  if (!invite.ok) throw new Error("invite failed");
+
+  expect(await respondToRequest(testDb, "cap", invite.requestId, true)).toEqual({ ok: false, reason: "not_allowed" });
+  expect(await respondToRequest(testDb, "guest", invite.requestId, true)).toEqual({ ok: true });
+  const [member] = await testDb
+    .select()
+    .from(teamMembers)
+    .where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, "guest")));
+  expect(member!.role).toBe("member");
+  expect(await respondToRequest(testDb, "guest", invite.requestId, true)).toEqual({ ok: false, reason: "not_pending" });
+});
+
+test("join requests are answered by the captain only", async () => {
+  await linkedPlayer("cap");
+  await linkedPlayer("joiner");
+  await createTestUser("nolink");
+  const team = await createTestTeam("cap");
+
+  expect(await requestToJoin(testDb, "nolink", team.id)).toEqual({ ok: false, reason: "riot_required" });
+  expect(await requestToJoin(testDb, "cap", team.id)).toEqual({ ok: false, reason: "already_member" });
+  const request = await requestToJoin(testDb, "joiner", team.id);
+  if (!request.ok) throw new Error("request failed");
+  expect(await requestToJoin(testDb, "joiner", team.id)).toEqual({ ok: false, reason: "already_pending" });
+  expect(await listPendingRequestsForTeam(testDb, team.id)).toMatchObject([{ userId: "joiner", gameName: "joiner" }]);
+
+  expect(await respondToRequest(testDb, "joiner", request.requestId, true)).toEqual({ ok: false, reason: "not_allowed" });
+  expect(await respondToRequest(testDb, "cap", request.requestId, true)).toEqual({ ok: true });
+  expect((await getTeamBySlug(testDb, team.slug))!.members.map((m) => m.userId)).toEqual(["cap", "joiner"]);
+});
+
+test("the captain can't leave without transferring captaincy", async () => {
+  await linkedPlayer("cap");
+  await linkedPlayer("m1");
+  const team = await createTestTeam("cap", ["m1"]);
+
+  expect(await leaveTeam(testDb, "cap", team.id)).toEqual({ ok: false, reason: "captain_must_transfer" });
+  expect(await transferCaptain(testDb, "m1", team.id, "cap")).toEqual({ ok: false, reason: "not_captain" });
+  expect(await transferCaptain(testDb, "cap", team.id, "nobody")).toEqual({ ok: false, reason: "not_member" });
+  expect(await transferCaptain(testDb, "cap", team.id, "m1")).toEqual({ ok: true });
+  expect(await leaveTeam(testDb, "cap", team.id)).toEqual({ ok: true });
+
+  const view = await getTeamBySlug(testDb, team.slug);
+  expect(view!.captainUserId).toBe("m1");
+  expect(view!.members).toMatchObject([{ userId: "m1", role: "captain" }]);
+  expect(await leaveTeam(testDb, "cap", team.id)).toEqual({ ok: false, reason: "not_member" });
+});
+
+test("the captain can remove members but not themselves", async () => {
+  await linkedPlayer("cap");
+  await linkedPlayer("m1");
+  const team = await createTestTeam("cap", ["m1"]);
+  expect(await removeMember(testDb, "m1", team.id, "cap")).toEqual({ ok: false, reason: "not_captain" });
+  expect(await removeMember(testDb, "cap", team.id, "cap")).toEqual({ ok: false, reason: "not_member" });
+  expect(await removeMember(testDb, "cap", team.id, "m1")).toEqual({ ok: true });
+  expect(await removeMember(testDb, "cap", team.id, "m1")).toEqual({ ok: false, reason: "not_member" });
+});
+
+test("getTeamBySlug lists members with their current rank", async () => {
+  await linkedPlayer("cap", { tier: "GOLD", division: "II", lp: 40 });
+  await linkedPlayer("m1");
+  const team = await createTestTeam("cap", ["m1"], "Los Pibes");
+  const view = await getTeamBySlug(testDb, team.slug);
+  expect(view!.name).toBe("Los Pibes");
+  expect(view!.members).toEqual([
+    { userId: "cap", gameName: "cap", tagLine: "LAS", role: "captain", currentRank: { tier: "GOLD", division: "II", lp: 40 } },
+    { userId: "m1", gameName: "m1", tagLine: "LAS", role: "member", currentRank: null },
+  ]);
+  expect(await getTeamBySlug(testDb, "nope")).toBeNull();
+});

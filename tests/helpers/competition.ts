@@ -1,8 +1,10 @@
 import { createTournament } from "../../src/server/tournaments/tournaments";
-import { tournaments } from "../../src/server/db/schema";
+import { createTeam } from "../../src/server/teams/teams";
+import { rankSnapshots, riotAccounts, teamMembers, tournaments } from "../../src/server/db/schema";
+import type { Rank } from "../../src/shared/rank";
 import { eq } from "drizzle-orm";
 import type { TournamentInput, TournamentStatus } from "../../src/shared/tournament";
-import { createTestUser, testDb } from "./db";
+import { createTestRiotAccount, createTestUser, testDb } from "./db";
 
 export const baseTournamentInput: TournamentInput = {
   title: "Copa Semanal LAS",
@@ -39,4 +41,36 @@ export async function createTestTournament(overrides: Partial<TournamentInput> &
   if (status) await testDb.update(tournaments).set({ status }).where(eq(tournaments.id, created.id));
   const [row] = await testDb.select().from(tournaments).where(eq(tournaments.id, created.id));
   return row!;
+}
+
+export async function linkedPlayer(
+  id: string,
+  rank: Rank | null = null,
+  opts: { level?: number; games?: number } = {},
+): Promise<string> {
+  const accountId = await createTestRiotAccount(id, { puuid: `puuid-${id}`, gameName: id, tagLine: "LAS" });
+  await testDb.update(riotAccounts).set({ summonerLevel: opts.level ?? 30 }).where(eq(riotAccounts.id, accountId));
+  await testDb.insert(rankSnapshots).values({
+    riotAccountId: accountId,
+    tier: rank?.tier ?? null,
+    division: rank?.division ?? null,
+    lp: rank?.lp ?? null,
+    wins: opts.games ?? 0,
+    losses: 0,
+    observedAt: new Date(),
+  });
+  return id;
+}
+
+export async function createTestTeam(
+  captainId: string,
+  memberIds: string[] = [],
+  name = `Equipo ${++counter}`,
+): Promise<{ id: string; slug: string }> {
+  const created = await createTeam(testDb, captainId, { name, tag: `T${counter}${Math.floor(Math.random() * 1e3)}`.slice(0, 5) });
+  if (!created.ok) throw new Error(`createTestTeam failed: ${created.reason}`);
+  if (memberIds.length > 0) {
+    await testDb.insert(teamMembers).values(memberIds.map((userId) => ({ teamId: created.teamId, userId, role: "member" as const })));
+  }
+  return { id: created.teamId, slug: created.slug };
 }

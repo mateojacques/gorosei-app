@@ -1,4 +1,5 @@
-import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import type { EligibilityRule } from "../../../shared/eligibility";
 import type { RANK_SOURCES, TournamentStatus } from "../../../shared/tournament";
 import { user } from "./auth";
@@ -34,3 +35,55 @@ export const tournaments = pgTable("tournaments", {
   createdAt: tz("created_at").notNull().defaultNow(),
   updatedAt: tz("updated_at").notNull().defaultNow(),
 });
+
+export const teams = pgTable(
+  "teams",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+    name: text("name").notNull(),
+    tag: text("tag").notNull().unique(),
+    captainUserId: text("captain_user_id")
+      .notNull()
+      .references(() => user.id),
+    createdAt: tz("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("teams_name_lower_idx").on(sql`lower(${t.name})`)],
+);
+
+export const teamMembers = pgTable(
+  "team_members",
+  {
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    role: text("role").$type<"captain" | "member">().notNull(),
+    joinedAt: tz("joined_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.teamId, t.userId] })],
+);
+
+export const teamRequests = pgTable(
+  "team_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    kind: text("kind").$type<"invite" | "join_request">().notNull(),
+    status: text("status").$type<"pending" | "accepted" | "declined" | "cancelled">().notNull().default("pending"),
+    createdAt: tz("created_at").notNull().defaultNow(),
+    resolvedAt: tz("resolved_at"),
+  },
+  (t) => [
+    uniqueIndex("team_requests_one_pending_idx")
+      .on(t.teamId, t.userId)
+      .where(sql`${t.status} = 'pending'`),
+  ],
+);

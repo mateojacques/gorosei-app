@@ -22,6 +22,13 @@
       "when": 1792623842036,
       "tag": "0002_natural_falcon",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792623938919,
+      "tag": "0003_amused_random",
+      "breakpoints": true
     }
   ]
 }
