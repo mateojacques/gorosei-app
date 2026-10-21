@@ -28,11 +28,19 @@ test("profile is server-rendered with title, description and rank", async ({ req
   expect(html).toContain("Diamante I");
   expect(html).toMatch(/<title>[^<]*Señor Café#LAS[^<]*<\/title>/);
   expect(html).toMatch(/<meta name="description" content="[^"]+"/);
+  expect(html).toMatch(/<h1[^>]*>Señor Café#LAS<\/h1>/);
+  expect(html).toMatch(/<dt[^>]*>Rango actual<\/dt><dd[^>]*>Diamante I<\/dd>/);
+  expect(html).toMatch(/<dt[^>]*>Pico de temporada<\/dt><dd[^>]*>Diamante I<\/dd>/);
 });
 
 test("unknown players get a friendly 404", async ({ request }) => {
   const res = await request.get(`/jugador/${riotIdToSlug({ gameName: "Nadie", tagLine: "LAS" })}`);
 
+  const html = await res.text();
+  const main = html.match(/<main[\s\S]*<\/main>/)?.[0] ?? "";
+
   expect(res.status()).toBe(404);
-  expect(await res.text()).toContain("No encontramos a ese jugador");
+  expect(html).toContain("No encontramos a ese jugador");
+  // A way back to the cup inside the page itself, not just the header wordmark.
+  expect(main).toMatch(/<a [^>]*href="\/"/);
 });

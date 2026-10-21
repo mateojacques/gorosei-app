@@ -127,5 +127,8 @@ export const esAR = {
   "profile.tournaments": "Historial de torneos",
   "profile.noTournaments": "Todavía no jugó torneos.",
   "profile.metaDescription": "Perfil de {riotId} en Gorosei: rango actual {rank}, pico de temporada {peak}.",
+  "profile.server": "Servidor LAS",
+  "profile.notFoundTitle": "Sin señal",
+  "profile.backToCup": "Ver la Copa Semanal",
   "profile.notFound": "No encontramos a ese jugador. Revisá el Riot ID.",
 } as const;

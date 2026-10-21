@@ -1,4 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { CaptionBar } from "../components/cup/caption-bar";
+import { buttonVariants } from "../components/ui/button";
 import { getProfileBySlug } from "../server/identity/profile.functions";
 import { t } from "../shared/i18n";
 import { formatRank } from "../shared/rank";
@@ -30,36 +32,65 @@ export const Route = createFileRoute("/jugador/$riotId")({
 function ProfilePage() {
   const profile = Route.useLoaderData();
   return (
-    <main className="mx-auto max-w-2xl p-4">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold">{formatRiotId(profile)}</h1>
-        <p>{t("profile.level", { level: profile.summonerLevel })}</p>
-      </header>
-
-      <dl className="mb-6 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-        <dt className="font-bold">{t("profile.currentRank")}</dt>
-        <dd>{formatRank(profile.currentRank)}</dd>
-        <dt className="font-bold">{t("profile.seasonPeak")}</dt>
-        <dd>{formatRank(profile.seasonPeak)}</dd>
-      </dl>
-
-      <section className="mb-6">
-        <h2 className="text-xl font-bold">{t("profile.teams")}</h2>
-        <p>{t("profile.noTeams")}</p>
+    <main>
+      <section className="stage relative isolate overflow-hidden px-4 pt-10 pb-10 sm:px-8 md:pt-16 md:pb-14">
+        <div className="mx-auto max-w-4xl">
+          <h1 className="font-display text-[clamp(2.75rem,13vw,5.5rem)] leading-[0.9] font-black tracking-[-0.01em] [overflow-wrap:anywhere]">
+            {formatRiotId(profile)}
+          </h1>
+          <CaptionBar block={t("profile.level", { level: profile.summonerLevel })} className="mt-5">
+            {t("profile.server")}
+          </CaptionBar>
+        </div>
       </section>
 
-      <section>
-        <h2 className="text-xl font-bold">{t("profile.tournaments")}</h2>
-        <p>{t("profile.noTournaments")}</p>
-      </section>
+      <div className="px-4 py-12 sm:px-8 md:py-16">
+        <div className="mx-auto max-w-4xl">
+          <dl className="grid gap-8 sm:grid-cols-2">
+            <RankStat label={t("profile.currentRank")} value={formatRank(profile.currentRank)} />
+            <RankStat label={t("profile.seasonPeak")} value={formatRank(profile.seasonPeak)} />
+          </dl>
+
+          <QuietSection title={t("profile.teams")} body={t("profile.noTeams")} />
+          <QuietSection title={t("profile.tournaments")} body={t("profile.noTournaments")} />
+        </div>
+      </div>
     </main>
+  );
+}
+
+function RankStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-t border-line pt-4">
+      <dt className="font-display text-lg font-extrabold tracking-[0.04em] text-ink-muted uppercase">{label}</dt>
+      <dd className="mt-1 font-display text-[clamp(2.5rem,10vw,3.5rem)] leading-none font-black text-cobalt-light uppercase">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function QuietSection({ title, body }: { title: string; body: string }) {
+  return (
+    <section className="mt-12">
+      <h2 className="font-display text-2xl font-extrabold uppercase">{title}</h2>
+      <p className="mt-2 text-ink-muted">{body}</p>
+    </section>
   );
 }
 
 function ProfileNotFound() {
   return (
-    <main className="mx-auto max-w-2xl p-4">
-      <p>{t("profile.notFound")}</p>
+    <main className="px-4 py-16 sm:px-8 md:py-24">
+      <div className="mx-auto max-w-md">
+        <h1 className="font-display text-[clamp(3rem,15vw,5rem)] leading-[0.9] font-black uppercase">
+          {t("profile.notFoundTitle")}
+        </h1>
+        <p className="mt-4 text-lg">{t("profile.notFound")}</p>
+        <Link to="/" className={buttonVariants({ variant: "secondary", className: "mt-8" })}>
+          {t("profile.backToCup")}
+        </Link>
+      </div>
     </main>
   );
 }
