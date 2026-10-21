@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as IngresarRouteImport } from './routes/ingresar'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as VincularRiotRouteImport } from './routes/vincular-riot'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
 import { Route as JugadorRiotIdRouteImport } from './routes/jugador.$riotId'
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
 const IngresarRoute = IngresarRouteImport.update({
   id: '/ingresar',
   path: '/ingresar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VincularRiotRoute = VincularRiotRouteImport.update({
@@ -44,6 +50,7 @@ const JugadorRiotIdRoute = JugadorRiotIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
+  '/privacidad': typeof PrivacidadRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
+  '/privacidad': typeof PrivacidadRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
@@ -59,6 +67,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
+  '/privacidad': typeof PrivacidadRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
@@ -66,13 +75,25 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/ingresar' | '/vincular-riot' | '/api/$' | '/jugador/$riotId'
+    | '/'
+    | '/ingresar'
+    | '/privacidad'
+    | '/vincular-riot'
+    | '/api/$'
+    | '/jugador/$riotId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ingresar' | '/vincular-riot' | '/api/$' | '/jugador/$riotId'
+  to:
+    | '/'
+    | '/ingresar'
+    | '/privacidad'
+    | '/vincular-riot'
+    | '/api/$'
+    | '/jugador/$riotId'
   id:
     | '__root__'
     | '/'
     | '/ingresar'
+    | '/privacidad'
     | '/vincular-riot'
     | '/api/$'
     | '/jugador/$riotId'
@@ -81,6 +102,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   IngresarRoute: typeof IngresarRoute
+  PrivacidadRoute: typeof PrivacidadRoute
   VincularRiotRoute: typeof VincularRiotRoute
   ApiSplatRoute: typeof ApiSplatRoute
   JugadorRiotIdRoute: typeof JugadorRiotIdRoute
@@ -100,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/ingresar'
       fullPath: '/ingresar'
       preLoaderRoute: typeof IngresarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/vincular-riot': {
@@ -129,6 +158,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   IngresarRoute: IngresarRoute,
+  PrivacidadRoute: PrivacidadRoute,
   VincularRiotRoute: VincularRiotRoute,
   ApiSplatRoute: ApiSplatRoute,
   JugadorRiotIdRoute: JugadorRiotIdRoute,

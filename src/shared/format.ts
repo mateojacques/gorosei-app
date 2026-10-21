@@ -31,3 +31,9 @@ const cupTimeFormat = new Intl.DateTimeFormat("es-AR", {
 export function formatCupTime(d: Date): string {
   return cupTimeFormat.format(d);
 }
+
+const longDateFormat = new Intl.DateTimeFormat("es-AR", { timeZone: TIME_ZONE, dateStyle: "long" });
+
+export function formatLongDate(d: Date): string {
+  return longDateFormat.format(d);
+}

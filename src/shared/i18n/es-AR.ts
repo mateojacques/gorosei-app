@@ -39,6 +39,39 @@ export const esAR = {
   "cup.metaDescription":
     "Copa Semanal de League of Legends para LAS: {prize} para el equipo campeón. {day} a las {time} (hora argentina).",
 
+  "privacy.metaTitle": "Privacidad · Gorosei",
+  "privacy.metaDescription": "Qué datos guarda Gorosei, para qué los usamos, qué es público y cómo pedir que los borremos.",
+  "privacy.title": "Política de privacidad",
+  "privacy.updated": "Última actualización: {date}",
+  "privacy.intro":
+    "Gorosei organiza torneos de League of Legends para el servidor LAS. Esta página explica, sin vueltas, qué datos tuyos guardamos, para qué, qué se ve en público y qué podés pedirnos.",
+  "privacy.collect.title": "Qué datos guardamos",
+  "privacy.collect.account": "Tu nombre y tu email, cuando creás tu cuenta.",
+  "privacy.collect.discord": "Tu ID de Discord, si ingresás con Discord.",
+  "privacy.collect.riot": "Tu Riot ID (nombre#tag) y tu PUUID, el identificador que Riot Games le asigna a cada cuenta.",
+  "privacy.collect.game":
+    "Tu nivel de invocador, tu ícono de perfil y el historial de tu rango en clasificatorias, que obtenemos de la API de Riot Games.",
+  "privacy.collect.cookie": "Una cookie de sesión, que solo sirve para que no tengas que volver a ingresar en cada visita.",
+  "privacy.why.title": "Para qué los usamos",
+  "privacy.why.accounts": "Para crear y mantener tu cuenta.",
+  "privacy.why.verify":
+    "Para verificar que la cuenta de Riot es tuya: te pedimos que cambies tu ícono de perfil y lo comprobamos con la API de Riot.",
+  "privacy.why.eligibility": "Para saber si cumplís los requisitos de rango de cada torneo.",
+  "privacy.why.profiles": "Para mostrar tu perfil público de jugador.",
+  "privacy.why.noSale": "No vendemos tus datos ni los usamos para publicidad.",
+  "privacy.public.title": "Qué es público",
+  "privacy.public.body":
+    "Tu perfil de jugador lo puede ver cualquiera: Riot ID, nivel, rango actual, pico de la temporada, equipos e historial de torneos. Tu email y tu ID de Discord nunca se muestran.",
+  "privacy.thirdParties.title": "Con quién compartimos datos",
+  "privacy.thirdParties.riot": "Riot Games: consultamos su API con tu Riot ID y tu PUUID para verificar tu cuenta y tu rango.",
+  "privacy.thirdParties.discord": "Discord: si ingresás con Discord, Discord nos comparte tu ID, tu nombre y tu email.",
+  "privacy.thirdParties.hosting": "Nuestro proveedor de hosting, donde funcionan los servidores y la base de datos.",
+  "privacy.retention.title": "Cuánto tiempo los guardamos",
+  "privacy.retention.body":
+    "Guardamos tus datos mientras tengas una cuenta. Si nos pedís que la borremos, eliminamos tu cuenta, tu vínculo con Riot y tu historial de rango.",
+  "privacy.contact.title": "Contacto",
+  "privacy.contact.body": "Para preguntas, correcciones o para pedir que borremos tus datos, escribinos a",
+
   "rank.unranked": "Sin clasificar",
   "rank.tier.IRON": "Hierro",
   "rank.tier.BRONZE": "Bronce",
