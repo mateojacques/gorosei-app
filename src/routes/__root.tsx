@@ -1,6 +1,7 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { SiteFooter } from "../components/site/site-footer";
+import { NotFound } from "../components/site/not-found";
 import { SiteHeader } from "../components/site/site-header";
 import { getViewerState } from "../server/viewer.functions";
 import { t } from "../shared/i18n";
@@ -19,6 +20,7 @@ export const Route = createRootRoute({
   }),
   shellComponent: RootDocument,
   component: RootLayout,
+  notFoundComponent: () => <NotFound message={t("notFound.page")} />,
 });
 
 function RootLayout() {

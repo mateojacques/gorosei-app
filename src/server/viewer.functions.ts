@@ -7,7 +7,12 @@ export type ViewerState =
   | { signedIn: true; riotAccount: { gameName: string; tagLine: string } | null };
 
 export const getViewerState = createServerFn({ method: "GET" }).handler(async (): Promise<ViewerState> => {
-  // Server-only modules are imported inside the handler so they never reach the client bundle.
+  const { viewerStateOrSignedOut } = await import("./viewer");
+  return viewerStateOrSignedOut(loadViewerState);
+});
+
+async function loadViewerState(): Promise<ViewerState> {
+  // Server-only modules are imported inside the function so they never reach the client bundle.
   const { getSessionUser } = await import("./auth");
   const user = await getSessionUser(getRequestHeaders());
   if (!user) return { signedIn: false };
@@ -18,4 +23,4 @@ export const getViewerState = createServerFn({ method: "GET" }).handler(async ()
     .from(riotAccounts)
     .where(eq(riotAccounts.userId, user.id));
   return { signedIn: true, riotAccount: riotAccount ?? null };
-});
+}

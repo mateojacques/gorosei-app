@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { type FormEvent, useId, useState } from "react";
 import { authClient } from "../auth-client";
@@ -23,6 +23,7 @@ const AFTER_SIGN_IN = "/vincular-riot";
 function SignInPage() {
   const { discord } = Route.useLoaderData();
   const navigate = useNavigate();
+  const router = useRouter();
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
@@ -40,8 +41,13 @@ function SignInPage() {
         ? await authClient.signUp.email({ name: String(form.get("name")), email, password })
         : await authClient.signIn.email({ email, password });
     setPending(false);
-    if (result.error) setError(true);
-    else await navigate({ to: AFTER_SIGN_IN });
+    if (result.error) {
+      setError(true);
+      return;
+    }
+    // The root loader holds the viewer state; refresh it so the header and CTAs see the new session.
+    await router.invalidate();
+    await navigate({ to: AFTER_SIGN_IN });
   }
 
   return (

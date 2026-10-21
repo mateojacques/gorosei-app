@@ -1,6 +1,6 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { CaptionBar } from "../components/cup/caption-bar";
-import { buttonVariants } from "../components/ui/button";
+import { NotFound } from "../components/site/not-found";
 import { getProfileBySlug } from "../server/identity/profile.functions";
 import { t } from "../shared/i18n";
 import { formatRank } from "../shared/rank";
@@ -80,17 +80,5 @@ function QuietSection({ title, body }: { title: string; body: string }) {
 }
 
 function ProfileNotFound() {
-  return (
-    <main className="px-4 py-16 sm:px-8 md:py-24">
-      <div className="mx-auto max-w-md">
-        <h1 className="font-display text-[clamp(3rem,15vw,5rem)] leading-[0.9] font-black uppercase">
-          {t("profile.notFoundTitle")}
-        </h1>
-        <p className="mt-4 text-lg">{t("profile.notFound")}</p>
-        <Link to="/" className={buttonVariants({ variant: "secondary", className: "mt-8" })}>
-          {t("profile.backToCup")}
-        </Link>
-      </div>
-    </main>
-  );
+  return <NotFound message={t("profile.notFound")} />;
 }

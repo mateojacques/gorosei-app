@@ -5,15 +5,13 @@ import { t } from "@/shared/i18n";
 import { CaptionBar } from "./caption-bar";
 
 export function CupCountdown({ startsAt, className }: { startsAt: Date; className?: string }) {
-  const [now, setNow] = useState(() => new Date());
+  // Null until mount: the server and the first client render show only the date, so hydration matches.
+  const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  const countdown = getCountdown(now, startsAt);
-  const remaining = Math.max(0, Math.floor((startsAt.getTime() - now.getTime()) / 1000));
 
   return (
     <CaptionBar
@@ -24,10 +22,17 @@ export function CupCountdown({ startsAt, className }: { startsAt: Date; classNam
         </time>
       }
     >
-      {/* The server renders its own "now"; the client takes over on mount, so a few seconds of drift is expected. */}
-      <span data-remaining={remaining} suppressHydrationWarning>
-        {countdown ? `${formatCountdown(countdown)} ${t("cup.untilStart")}` : t("cup.live")}
-      </span>
+      {now && <Remaining now={now} startsAt={startsAt} />}
     </CaptionBar>
+  );
+}
+
+function Remaining({ now, startsAt }: { now: Date; startsAt: Date }) {
+  const countdown = getCountdown(now, startsAt);
+  const remaining = Math.max(0, Math.floor((startsAt.getTime() - now.getTime()) / 1000));
+  return (
+    <span data-remaining={remaining}>
+      {countdown ? `${formatCountdown(countdown)} ${t("cup.untilStart")}` : t("cup.live")}
+    </span>
   );
 }

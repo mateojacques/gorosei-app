@@ -2,6 +2,10 @@ export const esAR = {
   "app.name": "Gorosei",
   "common.error": "Algo salió mal. Probá de nuevo en unos minutos.",
 
+  "notFound.title": "Sin señal",
+  "notFound.page": "Esta página no existe o se movió.",
+  "notFound.backToCup": "Ver la Copa Semanal",
+
   "site.nav": "Cuenta",
   "site.signIn": "Ingresar",
   "site.linkRiot": "Vinculá Riot",
@@ -128,7 +132,5 @@ export const esAR = {
   "profile.noTournaments": "Todavía no jugó torneos.",
   "profile.metaDescription": "Perfil de {riotId} en Gorosei: rango actual {rank}, pico de temporada {peak}.",
   "profile.server": "Servidor LAS",
-  "profile.notFoundTitle": "Sin señal",
-  "profile.backToCup": "Ver la Copa Semanal",
   "profile.notFound": "No encontramos a ese jugador. Revisá el Riot ID.",
 } as const;
