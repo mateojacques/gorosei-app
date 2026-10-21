@@ -7,7 +7,7 @@ import * as schema from "../../src/server/db/schema";
 // tests/setup.ts points DATABASE_URL at the test database, so `db` is the test DB.
 export const testDb = db;
 
-const tableNames = Object.values(schema)
+const tableNames = (Object.values(schema) as unknown[])
   .filter((value): value is PgTable => is(value, PgTable))
   .map((table) => `"${getTableName(table)}"`);
 
