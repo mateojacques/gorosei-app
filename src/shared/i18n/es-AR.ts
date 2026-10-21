@@ -133,4 +133,31 @@ export const esAR = {
   "profile.metaDescription": "Perfil de {riotId} en Gorosei: rango actual {rank}, pico de temporada {peak}.",
   "profile.server": "Servidor LAS",
   "profile.notFound": "No encontramos a ese jugador. Revisá el Riot ID.",
+
+  "eligibility.fail.rank_above": "{player} tiene {rank} y el máximo permitido es {max}.",
+  "eligibility.fail.rank_below": "{player} tiene {rank} y el mínimo requerido es {min}.",
+  "eligibility.fail.team_average":
+    "El promedio de rango del equipo ({average}) supera el máximo permitido ({max}).",
+  "eligibility.fail.point_budget":
+    "Tu roster suma {total} puntos y el máximo permitido es {max}.",
+  "eligibility.fail.max_players_above":
+    "Tu roster rompe una regla: máximo {count} jugador por encima de {rank}.",
+  "eligibility.fail.max_players_above_other":
+    "Tu roster rompe una regla: máximo {count} jugadores por encima de {rank}.",
+  "eligibility.fail.min_level": "{player} tiene nivel {level} y el mínimo requerido es {min}.",
+  "eligibility.fail.min_ranked_games":
+    "{player} jugó {games} partidas clasificatorias y el mínimo requerido es {min}.",
+
+  "eligibility.describe.player_rank_range": "Rango por jugador: de {min} a {max}",
+  "eligibility.describe.player_rank_range_min": "Rango mínimo por jugador: {min}",
+  "eligibility.describe.player_rank_range_max": "Rango máximo por jugador: {max}",
+  "eligibility.describe.team_average_max": "Promedio de rango del equipo: hasta {max}",
+  "eligibility.describe.point_budget": "Presupuesto de puntos del roster: máximo {max}",
+  "eligibility.describe.max_players_above":
+    "Máximo {count} jugador por encima de {rank}",
+  "eligibility.describe.max_players_above_other":
+    "Máximo {count} jugadores por encima de {rank}",
+  "eligibility.describe.account_minimums": "Cuenta: {parts}",
+  "eligibility.describe.min_level": "nivel {level} o más",
+  "eligibility.describe.min_ranked_games": "{games} partidas clasificatorias o más",
 } as const;
