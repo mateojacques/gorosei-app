@@ -1,10 +1,13 @@
 import { createTournament } from "../../src/server/tournaments/tournaments";
 import { createTeam } from "../../src/server/teams/teams";
-import { rankSnapshots, riotAccounts, teamMembers, tournaments } from "../../src/server/db/schema";
+import { registerTeam } from "../../src/server/tournaments/registrations";
+import type { RosterInput } from "../../src/server/tournaments/registrations";
+import { rankSnapshots, riotAccounts, teamMembers, teams, tournaments } from "../../src/server/db/schema";
 import type { Rank } from "../../src/shared/rank";
 import { eq } from "drizzle-orm";
 import type { TournamentInput, TournamentStatus } from "../../src/shared/tournament";
 import { createTestRiotAccount, createTestUser, testDb } from "./db";
+import { FakeRiotClient } from "./fake-riot";
 
 export const baseTournamentInput: TournamentInput = {
   title: "Copa Semanal LAS",
@@ -74,4 +77,13 @@ export async function createTestTeam(
     await testDb.insert(teamMembers).values(memberIds.map((userId) => ({ teamId: created.teamId, userId, role: "member" as const })));
   }
   return { id: created.teamId, slug: created.slug };
+}
+
+/** Registers the team through registerTeam as its captain; the tournament must be open. */
+export async function createTestRegistration(tournamentId: string, teamId: string, roster: RosterInput): Promise<string> {
+  const [team] = await testDb.select({ captainUserId: teams.captainUserId }).from(teams).where(eq(teams.id, teamId));
+  if (!team) throw new Error(`createTestRegistration: unknown team ${teamId}`);
+  const result = await registerTeam({ db: testDb, riot: new FakeRiotClient() }, team.captainUserId, tournamentId, teamId, roster);
+  if (!result.ok) throw new Error(`createTestRegistration failed: ${result.reason}`);
+  return result.registrationId;
 }

@@ -16,6 +16,9 @@ export const ROSTER_STARTERS = 5;
 
 export const RANK_SOURCES = ["current", "peak_season"] as const;
 
+export const REGISTRATION_STATUSES = ["pending", "confirmed", "waitlisted", "withdrawn", "dropped"] as const;
+export type RegistrationStatus = (typeof REGISTRATION_STATUSES)[number];
+
 const bestOf = z.union([z.literal(1), z.literal(3), z.literal(5)]);
 
 export const tournamentInputSchema = z

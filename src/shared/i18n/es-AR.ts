@@ -175,4 +175,17 @@ export const esAR = {
   "team.error.not_pending": "Esta solicitud ya no está pendiente.",
   "team.error.not_member": "Esa persona no es parte del equipo.",
   "team.error.captain_must_transfer": "Pasale la capitanía a otro integrante antes de salir del equipo.",
+  "team.error.on_confirmed_roster":
+    "Esa persona está en un roster confirmado. El capitán tiene que reemplazarla antes de que deje el equipo.",
+  "registration.error.not_captain": "Solo el capitán del equipo puede inscribirlo o cambiar el roster.",
+  "registration.error.registration_closed": "La inscripción a este torneo no está abierta.",
+  "registration.error.already_registered": "Tu equipo ya está inscripto en este torneo.",
+  "registration.error.player_not_member": "Todos los jugadores del roster tienen que ser parte del equipo.",
+  "registration.error.player_already_registered": "Un jugador del roster ya está inscripto con otro equipo en este torneo.",
+  "registration.error.riot_required": "Todos los jugadores del roster necesitan una cuenta de Riot vinculada.",
+  "registration.error.too_many_starters": "El roster puede tener como máximo 5 titulares.",
+  "registration.error.too_many_subs": "El roster tiene más suplentes de los que permite este torneo.",
+  "registration.error.locked": "El roster ya no se puede cambiar.",
+  "registration.error.would_unconfirm": "Ese cambio dejaría a tu equipo sin confirmar.",
+  "registration.error.ineligible": "El roster no cumple las reglas de elegibilidad del torneo.",
 } as const;

@@ -1,10 +1,19 @@
-import { and, asc, eq, like, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, like, notInArray, or, sql } from "drizzle-orm";
 import type { Rank } from "../../shared/rank";
 import { parseRiotId } from "../../shared/riot-id";
 import { slugify } from "../../shared/slug";
 import { writeAudit } from "../audit";
+import { uniqueViolation } from "../db/client";
 import type { Db, Executor } from "../db/client";
-import { riotAccounts, teamMembers, teamRequests, teams } from "../db/schema";
+import {
+  registrationPlayers,
+  registrations,
+  riotAccounts,
+  teamMembers,
+  teamRequests,
+  teams,
+  tournaments,
+} from "../db/schema";
 import { getCurrentRank } from "../identity/ranks";
 
 export type TeamRequest = {
@@ -66,12 +75,32 @@ async function hasPendingRequest(db: Executor, teamId: string, userId: string): 
   return !!row;
 }
 
-/** Postgres unique violation, possibly wrapped by drizzle; returns the violated constraint's name. */
-function uniqueViolation(error: unknown): string | null {
-  for (let e = error as { code?: string; constraint_name?: string; cause?: unknown } | undefined; e; e = e.cause as typeof e) {
-    if (e.code === "23505") return e.constraint_name ?? "";
+/**
+ * A player on a confirmed roster can't leave until the captain replaces them; otherwise they are
+ * dropped from the team's unconfirmed (pending or waitlisted) rosters. Tournaments that are over hold no one.
+ */
+async function releaseFromRosters(tx: Executor, teamId: string, userId: string): Promise<"on_confirmed_roster" | string[]> {
+  const rows = await tx
+    .select({ registrationId: registrations.id, status: registrations.status })
+    .from(registrationPlayers)
+    .innerJoin(registrations, eq(registrations.id, registrationPlayers.registrationId))
+    .innerJoin(tournaments, eq(tournaments.id, registrations.tournamentId))
+    .where(
+      and(
+        eq(registrations.teamId, teamId),
+        eq(registrationPlayers.userId, userId),
+        eq(registrationPlayers.active, true),
+        notInArray(tournaments.status, ["finished", "cancelled"]),
+      ),
+    );
+  if (rows.some((r) => r.status === "confirmed")) return "on_confirmed_roster";
+  const registrationIds = rows.map((r) => r.registrationId);
+  if (registrationIds.length > 0) {
+    await tx
+      .delete(registrationPlayers)
+      .where(and(inArray(registrationPlayers.registrationId, registrationIds), eq(registrationPlayers.userId, userId)));
   }
-  return null;
+  return registrationIds;
 }
 
 export async function createTeam(
@@ -239,18 +268,20 @@ export async function leaveTeam(
   db: Db,
   userId: string,
   teamId: string,
-): Promise<{ ok: true } | { ok: false; reason: "not_member" | "captain_must_transfer" }> {
+): Promise<{ ok: true } | { ok: false; reason: "not_member" | "captain_must_transfer" | "on_confirmed_roster" }> {
   return db.transaction(async (tx) => {
     const team = await lockTeam(tx, teamId);
     if (!team || !(await isMember(tx, teamId, userId))) return { ok: false, reason: "not_member" } as const;
     if (team.captainUserId === userId) return { ok: false, reason: "captain_must_transfer" } as const;
+    const droppedFrom = await releaseFromRosters(tx, teamId, userId);
+    if (droppedFrom === "on_confirmed_roster") return { ok: false, reason: droppedFrom } as const;
     await tx.delete(teamMembers).where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)));
     await writeAudit(tx, {
       actorUserId: userId,
       action: "team.member_left",
       entityType: "team",
       entityId: teamId,
-      data: { userId },
+      data: { userId, droppedFrom },
     });
     return { ok: true } as const;
   });
@@ -261,7 +292,7 @@ export async function removeMember(
   captainId: string,
   teamId: string,
   userId: string,
-): Promise<{ ok: true } | { ok: false; reason: "not_captain" | "not_member" }> {
+): Promise<{ ok: true } | { ok: false; reason: "not_captain" | "not_member" | "on_confirmed_roster" }> {
   return db.transaction(async (tx) => {
     const team = await lockTeam(tx, teamId);
     if (!team || team.captainUserId !== captainId) return { ok: false, reason: "not_captain" } as const;
@@ -269,13 +300,15 @@ export async function removeMember(
     if (userId === captainId || !(await isMember(tx, teamId, userId))) {
       return { ok: false, reason: "not_member" } as const;
     }
+    const droppedFrom = await releaseFromRosters(tx, teamId, userId);
+    if (droppedFrom === "on_confirmed_roster") return { ok: false, reason: droppedFrom } as const;
     await tx.delete(teamMembers).where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)));
     await writeAudit(tx, {
       actorUserId: captainId,
       action: "team.member_removed",
       entityType: "team",
       entityId: teamId,
-      data: { userId },
+      data: { userId, droppedFrom },
     });
     return { ok: true } as const;
   });

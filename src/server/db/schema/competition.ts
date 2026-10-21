@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
 import { boolean, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import type { EligibilityRule } from "../../../shared/eligibility";
-import type { RANK_SOURCES, TournamentStatus } from "../../../shared/tournament";
+import type { EligibilityRule, PlayerSnapshot } from "../../../shared/eligibility";
+import type { RANK_SOURCES, RegistrationStatus, TournamentStatus } from "../../../shared/tournament";
 import { user } from "./auth";
+import { riotAccounts } from "./identity";
 
 const tz = (name: string) => timestamp(name, { withTimezone: true });
 
@@ -86,4 +87,73 @@ export const teamRequests = pgTable(
       .on(t.teamId, t.userId)
       .where(sql`${t.status} = 'pending'`),
   ],
+);
+
+export const registrations = pgTable(
+  "registrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tournamentId: uuid("tournament_id")
+      .notNull()
+      .references(() => tournaments.id),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id),
+    status: text("status").$type<RegistrationStatus>().notNull().default("pending"),
+    createdAt: tz("created_at").notNull().defaultNow(),
+    updatedAt: tz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    // A team has at most one live registration per tournament; it can register again after withdrawing.
+    uniqueIndex("registrations_one_active_per_team_idx")
+      .on(t.tournamentId, t.teamId)
+      .where(sql`${t.status} not in ('withdrawn', 'dropped')`),
+  ],
+);
+
+export const registrationPlayers = pgTable(
+  "registration_players",
+  {
+    registrationId: uuid("registration_id")
+      .notNull()
+      .references(() => registrations.id),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    tournamentId: uuid("tournament_id")
+      .notNull()
+      .references(() => tournaments.id),
+    riotAccountId: uuid("riot_account_id")
+      .notNull()
+      .references(() => riotAccounts.id),
+    isSub: boolean("is_sub").notNull(),
+    snapshot: jsonb("snapshot").$type<PlayerSnapshot>().notNull(),
+    active: boolean("active").notNull().default(true),
+  },
+  (t) => [
+    primaryKey({ columns: [t.registrationId, t.userId] }),
+    // The database guarantees one active roster per player per tournament.
+    uniqueIndex("registration_players_one_active_idx")
+      .on(t.tournamentId, t.userId)
+      .where(sql`${t.active}`),
+  ],
+);
+
+export const eligibilityExceptions = pgTable(
+  "eligibility_exceptions",
+  {
+    tournamentId: uuid("tournament_id")
+      .notNull()
+      .references(() => tournaments.id),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id),
+    ruleId: text("rule_id").notNull(),
+    reason: text("reason").notNull(),
+    grantedBy: text("granted_by")
+      .notNull()
+      .references(() => user.id),
+    grantedAt: tz("granted_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.tournamentId, t.teamId, t.ruleId] })],
 );
