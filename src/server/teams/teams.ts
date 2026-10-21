@@ -157,17 +157,25 @@ export async function requestToJoin(
   db: Db,
   userId: string,
   teamId: string,
-): Promise<{ ok: true; requestId: string } | { ok: false; reason: "riot_required" | "already_member" | "already_pending" }> {
-  return db.transaction(async (tx) => {
-    if (!(await hasRiotAccount(tx, userId))) return { ok: false, reason: "riot_required" } as const;
-    if (await isMember(tx, teamId, userId)) return { ok: false, reason: "already_member" } as const;
-    if (await hasPendingRequest(tx, teamId, userId)) return { ok: false, reason: "already_pending" } as const;
-    const [request] = await tx
-      .insert(teamRequests)
-      .values({ teamId, userId, kind: "join_request" })
-      .returning({ id: teamRequests.id });
-    return { ok: true, requestId: request!.id } as const;
-  });
+): Promise<
+  { ok: true; requestId: string } | { ok: false; reason: "riot_required" | "team_not_found" | "already_member" | "already_pending" }
+> {
+  try {
+    return await db.transaction(async (tx) => {
+      if (!(await hasRiotAccount(tx, userId))) return { ok: false, reason: "riot_required" } as const;
+      if (!(await lockTeam(tx, teamId))) return { ok: false, reason: "team_not_found" } as const;
+      if (await isMember(tx, teamId, userId)) return { ok: false, reason: "already_member" } as const;
+      if (await hasPendingRequest(tx, teamId, userId)) return { ok: false, reason: "already_pending" } as const;
+      const [request] = await tx
+        .insert(teamRequests)
+        .values({ teamId, userId, kind: "join_request" })
+        .returning({ id: teamRequests.id });
+      return { ok: true, requestId: request!.id } as const;
+    });
+  } catch (error) {
+    if (uniqueViolation(error) === "team_requests_one_pending_idx") return { ok: false, reason: "already_pending" };
+    throw error;
+  }
 }
 
 async function lockPendingRequest(tx: Executor, requestId: string) {

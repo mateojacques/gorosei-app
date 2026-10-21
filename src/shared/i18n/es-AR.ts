@@ -170,6 +170,7 @@ export const esAR = {
   "team.error.player_not_found": "No encontramos a ningún jugador con ese Riot ID en Gorosei.",
   "team.error.already_member": "Ese jugador ya es parte del equipo.",
   "team.error.already_pending": "Ya hay una solicitud pendiente con ese jugador.",
+  "team.error.team_not_found": "No encontramos ese equipo.",
   "team.error.not_allowed": "No podés responder esta solicitud.",
   "team.error.not_pending": "Esta solicitud ya no está pendiente.",
   "team.error.not_member": "Esa persona no es parte del equipo.",

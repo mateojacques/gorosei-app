@@ -2,6 +2,7 @@ import { beforeEach, expect, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
 import { auditLog, teamMembers, teams } from "../../../src/server/db/schema";
 import {
+  cancelRequest,
   createTeam,
   getTeamBySlug,
   inviteByRiotId,
@@ -146,4 +147,49 @@ test("getTeamBySlug lists members with their current rank", async () => {
     { userId: "m1", gameName: "m1", tagLine: "LAS", role: "member", currentRank: null },
   ]);
   expect(await getTeamBySlug(testDb, "nope")).toBeNull();
+});
+
+test("requesting to join a missing team returns team_not_found", async () => {
+  await linkedPlayer("joiner");
+  expect(await requestToJoin(testDb, "joiner", crypto.randomUUID())).toEqual({ ok: false, reason: "team_not_found" });
+});
+
+test("concurrent join requests resolve to one request and already_pending", async () => {
+  await linkedPlayer("cap");
+  await linkedPlayer("joiner");
+  const team = await createTestTeam("cap");
+  const results = await Promise.all([requestToJoin(testDb, "joiner", team.id), requestToJoin(testDb, "joiner", team.id)]);
+  expect(results.filter((r) => r.ok)).toHaveLength(1);
+  expect(results.find((r) => !r.ok)).toEqual({ ok: false, reason: "already_pending" });
+});
+
+test("declining a request adds no member and frees the slot for a new request", async () => {
+  await linkedPlayer("cap");
+  await linkedPlayer("joiner");
+  const team = await createTestTeam("cap");
+  const request = await requestToJoin(testDb, "joiner", team.id);
+  if (!request.ok) throw new Error("request failed");
+  expect(await respondToRequest(testDb, "cap", request.requestId, false)).toEqual({ ok: true });
+  expect((await getTeamBySlug(testDb, team.slug))!.members.map((m) => m.userId)).toEqual(["cap"]);
+  expect(await respondToRequest(testDb, "cap", request.requestId, true)).toEqual({ ok: false, reason: "not_pending" });
+  expect((await requestToJoin(testDb, "joiner", team.id)).ok).toBe(true);
+});
+
+test("the captain cancels an invite and the requester cancels a join request", async () => {
+  await linkedPlayer("cap");
+  await linkedPlayer("guest");
+  await linkedPlayer("joiner");
+  const team = await createTestTeam("cap");
+  const invite = await inviteByRiotId(testDb, "cap", team.id, "guest#LAS");
+  const request = await requestToJoin(testDb, "joiner", team.id);
+  if (!invite.ok || !request.ok) throw new Error("setup failed");
+
+  expect(await cancelRequest(testDb, "guest", invite.requestId)).toEqual({ ok: false, reason: "not_allowed" });
+  expect(await cancelRequest(testDb, "cap", request.requestId)).toEqual({ ok: false, reason: "not_allowed" });
+  expect(await cancelRequest(testDb, "cap", invite.requestId)).toEqual({ ok: true });
+  expect(await cancelRequest(testDb, "joiner", request.requestId)).toEqual({ ok: true });
+  expect(await cancelRequest(testDb, "cap", invite.requestId)).toEqual({ ok: false, reason: "not_pending" });
+  expect(await cancelRequest(testDb, "cap", crypto.randomUUID())).toEqual({ ok: false, reason: "not_pending" });
+  expect(await respondToRequest(testDb, "guest", invite.requestId, true)).toEqual({ ok: false, reason: "not_pending" });
+  expect((await listPendingRequestsForTeam(testDb, team.id))).toHaveLength(0);
 });

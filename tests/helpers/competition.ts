@@ -29,6 +29,7 @@ export const baseTournamentInput: TournamentInput = {
 };
 
 let counter = 0;
+let tagCounter = 0;
 
 export async function createTestTournament(overrides: Partial<TournamentInput> & { status?: TournamentStatus } = {}) {
   const { status, ...input } = overrides;
@@ -67,7 +68,7 @@ export async function createTestTeam(
   memberIds: string[] = [],
   name = `Equipo ${++counter}`,
 ): Promise<{ id: string; slug: string }> {
-  const created = await createTeam(testDb, captainId, { name, tag: `T${counter}${Math.floor(Math.random() * 1e3)}`.slice(0, 5) });
+  const created = await createTeam(testDb, captainId, { name, tag: `T${(++tagCounter).toString(36).toUpperCase()}` });
   if (!created.ok) throw new Error(`createTestTeam failed: ${created.reason}`);
   if (memberIds.length > 0) {
     await testDb.insert(teamMembers).values(memberIds.map((userId) => ({ teamId: created.teamId, userId, role: "member" as const })));
