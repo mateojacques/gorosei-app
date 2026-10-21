@@ -8,6 +8,13 @@
       "when": 1792615785863,
       "tag": "0000_condemned_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792615960548,
+      "tag": "0001_wet_the_initiative",
+      "breakpoints": true
     }
   ]
 }
