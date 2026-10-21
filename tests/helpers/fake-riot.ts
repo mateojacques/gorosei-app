@@ -48,6 +48,10 @@ export class FakeRiotClient implements RiotClient {
     return { ok: true as const, data: { puuid: match.puuid, gameName: match.gameName, tagLine: match.tagLine } };
   }
 
+  async getAccountByPuuid(puuid: string) {
+    return this.lookup(puuid, (a) => ({ puuid: a.puuid, gameName: a.gameName, tagLine: a.tagLine }));
+  }
+
   async getSummonerByPuuid(puuid: string) {
     return this.lookup(puuid, (a) => ({ profileIconId: a.profileIconId, summonerLevel: a.summonerLevel }));
   }

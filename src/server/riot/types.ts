@@ -9,6 +9,7 @@ export type RiotSoloRank = Rank & { wins: number; losses: number };
 
 export interface RiotClient {
   getAccountByRiotId(gameName: string, tagLine: string): Promise<RiotResult<RiotAccount>>;
+  getAccountByPuuid(puuid: string): Promise<RiotResult<RiotAccount>>;
   getSummonerByPuuid(puuid: string): Promise<RiotResult<RiotSummoner>>;
   getSoloRankByPuuid(puuid: string): Promise<RiotResult<RiotSoloRank | null>>;
 }

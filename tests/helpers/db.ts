@@ -22,3 +22,15 @@ export async function createTestUser(id: string): Promise<string> {
   await testDb.insert(schema.user).values({ id, name: id, email: `${id}@test.local` });
   return id;
 }
+
+export async function createTestRiotAccount(
+  userId: string,
+  riotId: { puuid: string; gameName: string; tagLine: string },
+): Promise<string> {
+  await createTestUser(userId);
+  const [row] = await testDb
+    .insert(schema.riotAccounts)
+    .values({ userId, ...riotId, summonerLevel: 30, profileIconId: 0 })
+    .returning({ id: schema.riotAccounts.id });
+  return row!.id;
+}

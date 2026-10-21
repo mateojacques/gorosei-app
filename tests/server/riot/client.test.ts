@@ -123,3 +123,11 @@ test("getSoloRankByPuuid returns null for unranked players", async () => {
 
   expect(await riot.getSoloRankByPuuid("p1")).toEqual({ ok: true, data: null });
 });
+
+test("getAccountByPuuid reads the current Riot ID", async () => {
+  const stub = stubFetch([{ status: 200, body: account }]);
+  const riot = createRiotClient({ apiKey: "k", fetch: stub.fetch, sleep: noSleep });
+
+  expect(await riot.getAccountByPuuid("p1")).toEqual({ ok: true, data: account });
+  expect(stub.calls[0]!.url).toBe("https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid/p1");
+});

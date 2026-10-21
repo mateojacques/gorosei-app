@@ -4,6 +4,7 @@ import { writeAudit } from "../audit";
 import type { Db } from "../db/client";
 import { riotAccounts, riotLinkChallenges } from "../db/schema";
 import type { RiotClient } from "../riot/types";
+import { recordRankSnapshot } from "./ranks";
 
 const CHALLENGE_DURATION_MS = 30 * 60_000;
 // Profile icons 0..28 are the free defaults every account owns.
@@ -86,6 +87,8 @@ export async function confirmRiotLink(deps: LinkRiotDeps, userId: string): Promi
       });
       return id;
     });
+    // The link stands even if Riot fails here; the next poll records the first snapshot.
+    await recordRankSnapshot({ db, riot, now: () => now }, riotAccountId);
     return { ok: true, riotAccountId };
   } catch (error) {
     if (isUniqueViolation(error)) return { ok: false, reason: "taken_by_other" };

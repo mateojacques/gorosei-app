@@ -1,5 +1,5 @@
 import { isDivision, isTier } from "../../shared/rank";
-import type { RiotClient, RiotResult, RiotSoloRank } from "./types";
+import type { RiotAccount, RiotClient, RiotResult, RiotSoloRank } from "./types";
 
 const REGIONAL_HOST = "https://americas.api.riotgames.com";
 const PLATFORM_HOST = "https://la2.api.riotgames.com";
@@ -57,15 +57,18 @@ export function createRiotClient(opts: RiotClientOptions): RiotClient {
     return { ok: false, error: failure };
   }
 
+  async function getAccount(path: string): Promise<RiotResult<RiotAccount>> {
+    const result = await get<RiotAccount>(`${REGIONAL_HOST}/riot/account/v1/accounts/${path}`);
+    if (!result.ok) return result;
+    const { puuid, gameName, tagLine } = result.data;
+    return { ok: true, data: { puuid, gameName, tagLine } };
+  }
+
   return {
-    getAccountByRiotId: async (gameName, tagLine) => {
-      const result = await get<{ puuid: string; gameName: string; tagLine: string }>(
-        `${REGIONAL_HOST}/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
-      );
-      if (!result.ok) return result;
-      const { puuid, gameName: name, tagLine: tag } = result.data;
-      return { ok: true, data: { puuid, gameName: name, tagLine: tag } };
-    },
+    getAccountByRiotId: (gameName, tagLine) =>
+      getAccount(`by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`),
+
+    getAccountByPuuid: (puuid) => getAccount(`by-puuid/${encodeURIComponent(puuid)}`),
 
     getSummonerByPuuid: async (puuid) => {
       const result = await get<{ profileIconId: number; summonerLevel: number }>(

@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
-import { auditLog, riotAccounts, riotLinkChallenges } from "../../../src/server/db/schema";
+import { auditLog, rankSnapshots, riotAccounts, riotLinkChallenges } from "../../../src/server/db/schema";
 import { confirmRiotLink, startRiotLink } from "../../../src/server/identity/link-riot";
 import { createTestUser, resetTestDb, testDb } from "../../helpers/db";
 import { FakeRiotClient } from "../../helpers/fake-riot";
@@ -122,4 +122,15 @@ test("if another user links first, confirm fails and writes nothing", async () =
   expect(await confirmRiotLink(deps(), "u2")).toEqual({ ok: false, reason: "taken_by_other" });
   expect(await testDb.select().from(riotAccounts).where(eq(riotAccounts.userId, "u2"))).toEqual([]);
   expect(await testDb.select().from(auditLog)).toHaveLength(1);
+});
+
+test("a successful confirm records exactly one rank snapshot", async () => {
+  riot.setRank("p1", { tier: "GOLD", division: "II", lp: 30, wins: 5, losses: 5 });
+  await startAndSetIcon("u1");
+
+  await confirmRiotLink(deps(), "u1");
+
+  const snapshots = await testDb.select().from(rankSnapshots);
+  expect(snapshots).toHaveLength(1);
+  expect(snapshots[0]).toMatchObject({ tier: "GOLD", division: "II", lp: 30, observedAt: T0 });
 });
