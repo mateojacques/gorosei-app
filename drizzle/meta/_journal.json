@@ -15,6 +15,13 @@
       "when": 1792615960548,
       "tag": "0001_wet_the_initiative",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792623842036,
+      "tag": "0002_natural_falcon",
+      "breakpoints": true
     }
   ]
 }

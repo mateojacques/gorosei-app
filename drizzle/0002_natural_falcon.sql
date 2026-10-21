@@ -1,0 +1,30 @@
+CREATE TABLE "tournaments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"slug" text NOT NULL,
+	"title" text NOT NULL,
+	"edition" integer NOT NULL,
+	"status" text DEFAULT 'draft' NOT NULL,
+	"starts_at" timestamp with time zone NOT NULL,
+	"registration_closes_at" timestamp with time zone NOT NULL,
+	"bracket" text NOT NULL,
+	"draft_mode" text NOT NULL,
+	"best_of" integer NOT NULL,
+	"finals_best_of" integer NOT NULL,
+	"team_cap" integer NOT NULL,
+	"max_subs" integer NOT NULL,
+	"subs_count_for_team_rules" boolean NOT NULL,
+	"rank_source" text DEFAULT 'peak_season' NOT NULL,
+	"eligibility_rules" jsonb NOT NULL,
+	"entry_fee_ars" integer NOT NULL,
+	"prize_goal_ars" integer NOT NULL,
+	"prize_split" jsonb NOT NULL,
+	"payment_instructions" text NOT NULL,
+	"rules_text" text NOT NULL,
+	"stream_url" text NOT NULL,
+	"created_by" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "tournaments_slug_unique" UNIQUE("slug")
+);
+--> statement-breakpoint
+ALTER TABLE "tournaments" ADD CONSTRAINT "tournaments_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;
