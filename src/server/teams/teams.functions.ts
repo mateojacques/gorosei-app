@@ -42,8 +42,9 @@ export const getTeamPage = createServerFn({ method: "GET" })
       userId: user.id,
       role,
       linked: await hasRiotAccount(user.id),
-      // The viewer's own pending join request to this team, so the page offers to cancel it instead of asking again.
+      // The viewer's own pending request or invite with this team, so the page offers to answer it instead of asking again.
       joinRequestId: own.requests.find((r) => r.teamId === team.id)?.id ?? null,
+      inviteId: own.invites.find((r) => r.teamId === team.id)?.id ?? null,
     };
     const pendingRequests = role === "captain" ? await teams.listPendingRequestsForTeam(db, team.id) : [];
     return { team, viewer, pendingRequests };

@@ -52,7 +52,7 @@ function TeamPage() {
             {t(count === 1 ? "team.memberCount" : "team.memberCount_other", { count })}
           </CaptionBar>
           {viewer && viewer.role === null && viewer.linked && (
-            <JoinAction teamId={team.id} joinRequestId={viewer.joinRequestId} />
+            <JoinAction teamId={team.id} joinRequestId={viewer.joinRequestId} inviteId={viewer.inviteId} />
           )}
         </div>
       </section>
@@ -69,11 +69,42 @@ function TeamPage() {
   );
 }
 
-function JoinAction({ teamId, joinRequestId }: { teamId: string; joinRequestId: string | null }) {
+function JoinAction({
+  teamId,
+  joinRequestId,
+  inviteId,
+}: {
+  teamId: string;
+  joinRequestId: string | null;
+  inviteId: string | null;
+}) {
   const { run, error, pending } = useTeamAction();
   return (
     <div className="mt-8 flex flex-col items-start gap-4">
-      {joinRequestId ? (
+      {inviteId ? (
+        <>
+          <p role="status" className="text-lg">
+            {t("team.invitePending")}
+          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <Button
+              size="lg"
+              disabled={pending}
+              onClick={() => run(() => respondToRequestFn({ data: { requestId: inviteId, accept: true } }))}
+            >
+              {t("team.action.accept")}
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={pending}
+              className="px-0"
+              onClick={() => run(() => respondToRequestFn({ data: { requestId: inviteId, accept: false } }))}
+            >
+              {t("team.action.decline")}
+            </Button>
+          </div>
+        </>
+      ) : joinRequestId ? (
         <>
           <p role="status" className="text-lg">
             {t("team.requestPending")}
@@ -190,7 +221,7 @@ function Invite({ teamId }: { teamId: string }) {
   return (
     <section className="max-w-md">
       <SectionHeading>{t("team.invite.title")}</SectionHeading>
-      <form onSubmit={onSubmit} className="mt-4 flex flex-col gap-4">
+      <form method="post" onSubmit={onSubmit} className="mt-4 flex flex-col gap-4">
         <Field id={`${id}-riot-id`} label={t("team.invite.riotId")}>
           <Input
             id={`${id}-riot-id`}

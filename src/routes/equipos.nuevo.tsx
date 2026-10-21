@@ -24,14 +24,20 @@ function CreateTeamPage() {
     const form = new FormData(event.currentTarget);
     setPending(true);
     setError(null);
-    const result = await createTeamFn({ data: { name: String(form.get("name")), tag: String(form.get("tag")) } });
-    setPending(false);
-    if (!result.ok) {
-      setError(t(`team.error.${result.reason}`));
-      return;
+    try {
+      const result = await createTeamFn({ data: { name: String(form.get("name")), tag: String(form.get("tag")) } });
+      if (!result.ok) {
+        setError(t(`team.error.${result.reason}`));
+        return;
+      }
+      await router.invalidate();
+      await navigate({ to: "/equipos/$slug", params: { slug: result.slug } });
+    } catch {
+      // An expired session or a dropped connection must not leave the form locked and silent.
+      setError(t("common.error"));
+    } finally {
+      setPending(false);
     }
-    await router.invalidate();
-    await navigate({ to: "/equipos/$slug", params: { slug: result.slug } });
   }
 
   return (
@@ -41,7 +47,7 @@ function CreateTeamPage() {
           {t("team.create.title")}
         </h1>
         {viewer.signedIn ? (
-          <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-5">
+          <form method="post" onSubmit={onSubmit} className="mt-6 flex flex-col gap-5">
             <p className="text-lg">{t("team.create.intro")}</p>
             <Field id={`${id}-name`} label={t("team.create.name")}>
               <Input

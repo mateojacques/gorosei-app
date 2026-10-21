@@ -192,6 +192,7 @@ export const esAR = {
   "team.confirm.remove": "¿Quitar a {riotId} del equipo?",
   "team.confirm.makeCaptain": "¿Pasarle la capitanía a {riotId}? Vas a dejar de ser el capitán.",
   "team.confirm.leave": "¿Salir de {team}?",
+  "team.invitePending": "Te invitaron a este equipo.",
   "team.requestPending": "Ya pediste unirte. El capitán tiene que aceptarte.",
   "team.signInRequired": "Tenés que ingresar para armar o sumarte a un equipo.",
   "team.metaDescription": "{team} [{tag}] en Gorosei: roster y rangos de sus jugadores.",

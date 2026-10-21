@@ -5,7 +5,10 @@ import { type MessageKey, t } from "@/shared/i18n";
 type TeamReason = { [K in MessageKey]: K extends `team.error.${infer R}` ? R : never }[MessageKey];
 type ActionResult = { ok: true } | { ok: false; reason: TeamReason };
 
-/** Runs a team action: on success the page reloads its data, on failure the reason's message is shown. */
+/**
+ * Runs a team action: on success the page reloads its data, on failure the reason's message is shown.
+ * A call that throws (expired session, network down) gets the generic error instead of a stuck button.
+ */
 export function useTeamAction() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -13,14 +16,20 @@ export function useTeamAction() {
   async function run(action: () => Promise<ActionResult>): Promise<boolean> {
     setPending(true);
     setError(null);
-    const result = await action();
-    setPending(false);
-    if (!result.ok) {
-      setError(t(`team.error.${result.reason}`));
+    try {
+      const result = await action();
+      if (!result.ok) {
+        setError(t(`team.error.${result.reason}`));
+        return false;
+      }
+      await router.invalidate();
+      return true;
+    } catch {
+      setError(t("common.error"));
       return false;
+    } finally {
+      setPending(false);
     }
-    await router.invalidate();
-    return true;
   }
   return { run, error, pending };
 }

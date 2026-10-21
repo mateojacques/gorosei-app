@@ -40,12 +40,15 @@ const TAG_PATTERN = /^[A-Z0-9]{2,5}$/;
 
 const codePoints = (s: string) => [...s].length;
 
+// Static routes under /equipos win over /equipos/$slug, so a team can never own these slugs.
+const RESERVED_SLUGS = new Set(["nuevo"]);
+
 async function uniqueTeamSlug(db: Executor, base: string): Promise<string> {
   const rows = await db
     .select({ slug: teams.slug })
     .from(teams)
     .where(or(eq(teams.slug, base), like(teams.slug, `${base}-%`)));
-  const taken = new Set(rows.map((r) => r.slug));
+  const taken = new Set([...RESERVED_SLUGS, ...rows.map((r) => r.slug)]);
   if (!taken.has(base)) return base;
   for (let n = 2; ; n++) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
 }

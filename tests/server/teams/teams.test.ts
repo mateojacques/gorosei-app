@@ -56,6 +56,12 @@ test("symbol-only names get a fallback slug and collisions get suffixes", async 
   expect(second).toMatchObject({ ok: true, slug: "equipo-2" });
 });
 
+test("a team named after a reserved route segment gets a suffixed slug", async () => {
+  await linkedPlayer("cap");
+  // /equipos/nuevo is the create page, so no team may own that slug.
+  expect(await createTeam(testDb, "cap", { name: "Nuevo", tag: "NEW" })).toMatchObject({ ok: true, slug: "nuevo-2" });
+});
+
 test("inviting by Riot ID finds the player case-insensitively", async () => {
   await linkedPlayer("cap");
   await createTestRiotAccount("senor", { puuid: "p-senor", gameName: "Señor Café", tagLine: "LAS" });

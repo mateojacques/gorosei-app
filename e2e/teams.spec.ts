@@ -9,6 +9,7 @@ test.describe.configure({ mode: "serial" });
 let captain: StorageState;
 let invitee: StorageState;
 let unlinked: StorageState;
+let secondInvitee: StorageState;
 
 test.beforeAll(async () => {
   await resetTestDb();
@@ -27,6 +28,9 @@ test.beforeAll(async () => {
     })
   ).storageState;
   unlinked = (await createPlayer({ name: "Sin Riot", email: "sinriot@test.local" })).storageState;
+  secondInvitee = (
+    await createPlayer({ name: "Invitado", email: "invitado@test.local", riot: { gameName: "Invitado", tagLine: "LAS" } })
+  ).storageState;
 });
 
 async function pageAs(browser: Browser, storageState: StorageState) {
@@ -65,6 +69,36 @@ test("the captain invites a player, who accepts from Mis equipos and joins the r
 
   await inviteePage.goto("/equipos/los-pibes");
   await expect(inviteePage.getByRole("table", { name: "Roster" })).toContainText("Señor Café#LAS");
+});
+
+test("an invited player answers the invite from the team page instead of asking to join", async ({ browser }) => {
+  const captainPage = await pageAs(browser, captain);
+  await captainPage.goto("/equipos/los-pibes");
+  await captainPage.waitForLoadState("networkidle");
+  await captainPage.getByLabel("Riot ID").fill("Invitado#LAS");
+  await captainPage.getByRole("button", { name: "Invitar" }).click();
+  await expect(captainPage.getByRole("table", { name: "Solicitudes pendientes" })).toContainText("Invitado#LAS");
+
+  const page = await pageAs(browser, secondInvitee);
+  await page.goto("/equipos/los-pibes");
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("button", { name: "Pedir unirme" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Aceptar" }).click();
+  await expect(page.getByRole("table", { name: "Roster" })).toContainText("Invitado#LAS");
+  await expect(page.getByRole("button", { name: "Salir del equipo" })).toBeVisible();
+});
+
+test("a failed request unlocks the form and says something went wrong", async ({ browser }) => {
+  const page = await pageAs(browser, captain);
+  await page.goto("/equipos/nuevo");
+  await page.waitForLoadState("networkidle");
+  await page.route("**/_serverFn/**", (route) => route.abort());
+  await page.getByLabel("Nombre del equipo").fill("Sin Red");
+  await page.getByLabel("Tag").fill("RED");
+  await page.getByRole("button", { name: "Crear equipo" }).click();
+
+  await expect(page.getByRole("alert")).toHaveText("Algo salió mal. Probá de nuevo en unos minutos.");
+  await expect(page.getByRole("button", { name: "Crear equipo" })).toBeEnabled();
 });
 
 test("a player without Riot is told to link it when creating a team", async ({ browser }) => {
