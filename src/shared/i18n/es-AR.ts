@@ -103,6 +103,8 @@ export const esAR = {
   "riotLink.riotIdPlaceholder": "nombre#LAS",
   "riotLink.start": "Continuar",
   "riotLink.setIcon": "Cambiá tu ícono de perfil al ícono número {iconId} y después tocá «Ya lo cambié».",
+  "riotLink.iconLabel": "Ícono de perfil",
+  "riotLink.verifying": "Verificación",
   "riotLink.timeLeft": "Tiempo restante: {time}",
   "riotLink.confirm": "Ya lo cambié",
   "riotLink.restart": "Empezar de nuevo",

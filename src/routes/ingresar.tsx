@@ -1,7 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { authClient } from "../auth-client";
+import { Field, FormAlert } from "../components/site/form";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import { t } from "../shared/i18n";
 
 const getAuthOptions = createServerFn({ method: "GET" }).handler(async () => {
@@ -23,6 +26,7 @@ function SignInPage() {
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
+  const id = useId();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,57 +45,63 @@ function SignInPage() {
   }
 
   return (
-    <main className="mx-auto max-w-sm p-4">
-      <h1 className="mb-4 text-2xl font-bold">{t("auth.title")}</h1>
+    <main className="px-4 py-12 sm:px-8 md:py-20">
+      <div className="mx-auto max-w-sm">
+        <h1 className="font-display text-[clamp(2.5rem,12vw,4rem)] leading-[0.9] font-black uppercase">
+          {t(mode === "signUp" ? "auth.signUp" : "auth.title")}
+        </h1>
 
-      {discord && (
-        <>
-          <button
-            type="button"
-            className="w-full border px-3 py-2"
-            onClick={() => authClient.signIn.social({ provider: "discord", callbackURL: AFTER_SIGN_IN })}
-          >
-            {t("auth.discord")}
-          </button>
-          <p className="my-4 text-center">{t("auth.or")}</p>
-        </>
-      )}
-
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        {mode === "signUp" && (
-          <label className="flex flex-col">
-            {t("auth.name")}
-            <input name="name" required autoComplete="nickname" className="border px-2 py-1" />
-          </label>
+        {discord && (
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              className="mt-8 w-full"
+              onClick={() => authClient.signIn.social({ provider: "discord", callbackURL: AFTER_SIGN_IN })}
+            >
+              {t("auth.discord")}
+            </Button>
+            <p className="my-6 flex items-center gap-3 text-sm text-ink-muted before:h-px before:grow before:bg-line after:h-px after:grow after:bg-line">
+              {t("auth.or")}
+            </p>
+          </>
         )}
-        <label className="flex flex-col">
-          {t("auth.email")}
-          <input name="email" type="email" required autoComplete="email" className="border px-2 py-1" />
-        </label>
-        <label className="flex flex-col">
-          {t("auth.password")}
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete={mode === "signUp" ? "new-password" : "current-password"}
-            className="border px-2 py-1"
-          />
-        </label>
-        {error && <p role="alert">{t("auth.failed")}</p>}
-        <button type="submit" disabled={pending} className="border px-3 py-2 font-bold">
-          {t(mode === "signUp" ? "auth.signUp" : "auth.signIn")}
-        </button>
-      </form>
 
-      <button
-        type="button"
-        className="mt-4 underline"
-        onClick={() => setMode(mode === "signUp" ? "signIn" : "signUp")}
-      >
-        {t(mode === "signUp" ? "auth.haveAccount" : "auth.noAccount")}
-      </button>
+        <form onSubmit={onSubmit} className={`flex flex-col gap-5 ${discord ? "" : "mt-8"}`}>
+          {mode === "signUp" && (
+            <Field id={`${id}-name`} label={t("auth.name")}>
+              <Input id={`${id}-name`} name="name" required autoComplete="nickname" />
+            </Field>
+          )}
+          <Field id={`${id}-email`} label={t("auth.email")}>
+            <Input id={`${id}-email`} name="email" type="email" required autoComplete="email" aria-invalid={error || undefined} />
+          </Field>
+          <Field id={`${id}-password`} label={t("auth.password")}>
+            <Input
+              id={`${id}-password`}
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete={mode === "signUp" ? "new-password" : "current-password"}
+              aria-invalid={error || undefined}
+            />
+          </Field>
+          {error && <FormAlert>{t("auth.failed")}</FormAlert>}
+          <Button type="submit" size="lg" disabled={pending} className="mt-1 w-full">
+            {t(mode === "signUp" ? "auth.signUp" : "auth.signIn")}
+          </Button>
+        </form>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="mt-4 h-auto px-0 font-semibold"
+          onClick={() => setMode(mode === "signUp" ? "signIn" : "signUp")}
+        >
+          {t(mode === "signUp" ? "auth.haveAccount" : "auth.noAccount")}
+        </Button>
+      </div>
     </main>
   );
 }

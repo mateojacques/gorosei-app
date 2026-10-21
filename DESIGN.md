@@ -87,7 +87,7 @@ Strategy: committed. Near-black tinted cobalt carries the surface; cobalt is the
 - **Ink** `oklch(0.96 0.005 230)` for text, **ink muted** `oklch(0.72 0.015 230)` for secondary text (8:1).
 
 ### Named Rules
-- **Red means live.** Signal red appears at most twice per screen: the status tag and the one CTA. Never for errors decoration, links or borders.
+- **Red means live.** Signal red appears at most twice per screen: the status tag and the one CTA. Never for errors, links or borders.
 - **Light falls on one thing.** Cobalt light is for the single most important number or word in a block, not for every label.
 - Token values are tested for contrast in `tests/shared/theme.test.ts`; tune lightness and chroma, keep hue and role.
 
@@ -119,7 +119,7 @@ Flat. No drop shadows on surfaces. Depth comes from light, not shadow: the stage
 `Button` (`src/components/ui/button.tsx`, shadcn base). Variants: `primary` (signal red, white bold text), `secondary` (2px cobalt-light outline), `ghost` (text). Corners 4px. Focus: 2px cobalt-light outline, 3px offset.
 
 ### Inputs / Fields
-`Input` + `Label`: surface-raised fill, `line` border, 44px tall, 4px corners; focus switches the border and adds the cobalt-light outline; `aria-invalid` turns the border red. Labels sit above fields in Hanken 600. Errors render in a `role="alert"` region.
+`Input` + `Label`: surface-raised fill, `line` border, 44px tall, 4px corners; focus switches the border and adds the cobalt-light outline. Invalid fields set `aria-invalid` but stay off red (red means live). Labels sit above fields in Hanken 600. Errors render in a `role="alert"` region.
 
 ### Navigation
 Site header: `GOROSEI` wordmark in display type left; one account link right (Ingresar / Mi perfil / link Riot). Footer: privacy link plus the verbatim Riot notice in small ink-muted text, on every page.
