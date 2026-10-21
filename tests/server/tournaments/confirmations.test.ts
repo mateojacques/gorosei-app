@@ -145,6 +145,44 @@ test("cap full sends the next qualifying team to the waitlist and promotes it wh
   const forfeited = await testDb.select().from(entryPayments).where(eq(entryPayments.tournamentId, tournament.id));
   expect(forfeited.filter((p) => p.forfeited).map((p) => p.userId).sort()).toEqual([...a.ids].sort());
   expect((await getRegistrationView(testDb, a.registrationId))!.paidCount).toBe(0);
+  const forfeitAudits = await audits("payment.forfeited");
+  expect(forfeitAudits.map((r) => (r.data as { userId: string }).userId).sort()).toEqual([...a.ids].sort());
+});
+
+test("a pending team withdrawing forfeits nothing", async () => {
+  const tournament = await openTournament();
+  const { ids, captain, registrationId } = await registered(tournament.id, "p");
+  await markPaid(testDb, admin, tournament.id, ids.slice(0, 3), "MP");
+  expect(await statusOf(registrationId)).toBe("pending");
+
+  expect(await withdrawRegistration(testDb, captain, registrationId)).toEqual({ ok: true });
+  const payments = await testDb.select().from(entryPayments).where(eq(entryPayments.tournamentId, tournament.id));
+  expect(payments).toHaveLength(3);
+  expect(payments.every((p) => !p.forfeited)).toBe(true);
+  expect(await audits("payment.forfeited")).toHaveLength(0);
+});
+
+test("a player can pay again after a forfeit and the audit shows the replacement", async () => {
+  const tournament = await openTournament();
+  const { ids, captain, registrationId } = await registered(tournament.id, "p");
+  await markPaid(testDb, admin, tournament.id, ids, "MP-OLD");
+  await withdrawRegistration(testDb, captain, registrationId);
+
+  expect(await markPaid(testDb, admin, tournament.id, [ids[1]!], "MP-NEW")).toEqual({ ok: true, marked: 1 });
+  const [payment] = await testDb
+    .select()
+    .from(entryPayments)
+    .where(and(eq(entryPayments.tournamentId, tournament.id), eq(entryPayments.userId, ids[1]!)));
+  expect(payment).toMatchObject({ forfeited: false, reference: "MP-NEW" });
+  const marked = (await audits("payment.marked", payment!.id)).map((r) => r.data);
+  expect(marked).toContainEqual({
+    tournamentId: tournament.id,
+    userId: ids[1],
+    reference: "MP-NEW",
+    replacedForfeited: true,
+    previousReference: "MP-OLD",
+  });
+  expect(await audits("payment.forfeited", payment!.id)).toHaveLength(1);
 });
 
 test("two payment marks racing for the last slot never exceed the cap", async () => {

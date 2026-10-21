@@ -130,6 +130,12 @@ export async function markPaid(
     let marked = 0;
     for (const userId of new Set(userIds)) {
       // Already-paid players are skipped; a forfeited payment is replaced by the new one.
+      const [previous] = await tx
+        .select({ reference: entryPayments.reference })
+        .from(entryPayments)
+        .where(
+          and(eq(entryPayments.tournamentId, tournamentId), eq(entryPayments.userId, userId), eq(entryPayments.forfeited, true)),
+        );
       const [row] = await tx
         .insert(entryPayments)
         .values({ tournamentId, userId, source: "payment", reference, recordedBy: adminId })
@@ -146,7 +152,12 @@ export async function markPaid(
         action: "payment.marked",
         entityType: "entry_payment",
         entityId: row.id,
-        data: { tournamentId, userId, reference },
+        data: {
+          tournamentId,
+          userId,
+          reference,
+          ...(previous ? { replacedForfeited: true, previousReference: previous.reference } : {}),
+        },
       });
     }
     await recomputeConfirmations(tx, tournamentId, new Date());

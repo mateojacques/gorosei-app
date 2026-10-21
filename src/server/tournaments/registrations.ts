@@ -402,18 +402,29 @@ export async function withdrawRegistration(
         .from(registrationPlayers)
         .where(eq(registrationPlayers.registrationId, registrationId));
       if (roster.length > 0) {
-        await tx
+        const forfeited = await tx
           .update(entryPayments)
           .set({ forfeited: true })
           .where(
             and(
               eq(entryPayments.tournamentId, found.tournamentId),
+              eq(entryPayments.forfeited, false),
               inArray(
                 entryPayments.userId,
                 roster.map((r) => r.userId),
               ),
             ),
-          );
+          )
+          .returning();
+        for (const payment of forfeited) {
+          await writeAudit(tx, {
+            actorUserId: captainId,
+            action: "payment.forfeited",
+            entityType: "entry_payment",
+            entityId: payment.id,
+            data: { tournamentId: found.tournamentId, userId: payment.userId, registrationId, reference: payment.reference },
+          });
+        }
       }
     }
     await tx
