@@ -13,7 +13,12 @@ export async function closeDueRegistrations(db: Db, now: Date): Promise<{ closed
   let closed = 0;
   for (const { id } of due) {
     // A tournament closed or cancelled since the select comes back invalid_state and isn't counted.
-    if ((await closeRegistration(db, id, now, null)).ok) closed++;
+    // One failing close must not hold up the others.
+    try {
+      if ((await closeRegistration(db, id, now, null)).ok) closed++;
+    } catch (error) {
+      console.error(`[jobs] close-registrations: closing tournament ${id} failed`, error);
+    }
   }
   return { closed };
 }

@@ -32,6 +32,32 @@ export function takesPayments(tournament: Tournament | undefined): tournament is
   return tournament?.status === "registration_open" || tournament?.status === "registration_closed";
 }
 
+/** Users on an active roster of a confirmed registration. */
+export async function confirmedRosterUserIds(tx: Executor, tournamentId: string): Promise<Set<string>> {
+  const rows = await tx
+    .select({ userId: registrationPlayers.userId })
+    .from(registrationPlayers)
+    .innerJoin(registrations, eq(registrations.id, registrationPlayers.registrationId))
+    .where(
+      and(
+        eq(registrationPlayers.tournamentId, tournamentId),
+        eq(registrationPlayers.active, true),
+        eq(registrations.status, "confirmed"),
+      ),
+    );
+  return new Set(rows.map((r) => r.userId));
+}
+
+/**
+ * After close, a payment only matters for a player on a confirmed roster: anyone else's could never count,
+ * and close has already turned their earlier payments into credits.
+ */
+export async function acceptsPaymentFor(tx: Executor, tournament: Tournament, userIds: string[]): Promise<boolean> {
+  if (tournament.status !== "registration_closed") return true;
+  const confirmed = await confirmedRosterUserIds(tx, tournament.id);
+  return userIds.every((id) => confirmed.has(id));
+}
+
 /** Users with a live (non-forfeited) payment for the tournament. */
 export async function paidUserIds(tx: Executor, tournamentId: string): Promise<Set<string>> {
   const rows = await tx
@@ -131,7 +157,11 @@ export async function markPaid(
 ): Promise<{ ok: true; marked: number } | { ok: false; reason: "invalid_state" }> {
   return db.transaction(async (tx) => {
     // Taking the tournament lock first serializes concurrent marks racing for the last slot.
-    if (!takesPayments(await lockTournament(tx, tournamentId))) return { ok: false, reason: "invalid_state" } as const;
+    const tournament = await lockTournament(tx, tournamentId);
+    // After close the whole call is rejected if any player isn't on a confirmed roster; nothing is marked.
+    if (!takesPayments(tournament) || !(await acceptsPaymentFor(tx, tournament, userIds))) {
+      return { ok: false, reason: "invalid_state" } as const;
+    }
     let marked = 0;
     for (const userId of new Set(userIds)) {
       // Already-paid players are skipped; a forfeited payment is replaced by the new one.
@@ -175,9 +205,38 @@ export async function unmarkPaid(
   adminId: string,
   tournamentId: string,
   userId: string,
-): Promise<{ ok: true } | { ok: false; reason: "not_paid" | "invalid_state" }> {
+): Promise<{ ok: true } | { ok: false; reason: "not_paid" | "invalid_state" | "credit_spent" }> {
   return db.transaction(async (tx) => {
-    if (!takesPayments(await lockTournament(tx, tournamentId))) return { ok: false, reason: "invalid_state" } as const;
+    const tournament = await lockTournament(tx, tournamentId);
+    if (!takesPayments(tournament)) return { ok: false, reason: "invalid_state" } as const;
+    if (tournament.status === "registration_closed") {
+      // Close may have turned this payment into a credit; it goes away with the payment.
+      // Known residual: the revoked credit still holds the (user, tournament) slot, so a later cancel
+      // grants this player no cancelled credit.
+      const [credit] = await tx
+        .select()
+        .from(entryCredits)
+        .where(and(eq(entryCredits.userId, userId), eq(entryCredits.sourceTournamentId, tournamentId)))
+        .for("update");
+      if (credit && credit.status !== "available") return { ok: false, reason: "credit_spent" } as const;
+      if (credit) {
+        const [payment] = await tx
+          .select({ id: entryPayments.id })
+          .from(entryPayments)
+          .where(
+            and(eq(entryPayments.tournamentId, tournamentId), eq(entryPayments.userId, userId), eq(entryPayments.forfeited, false)),
+          );
+        if (!payment) return { ok: false, reason: "not_paid" } as const;
+        await tx.update(entryCredits).set({ status: "revoked" }).where(eq(entryCredits.id, credit.id));
+        await writeAudit(tx, {
+          actorUserId: adminId,
+          action: "credit.revoked",
+          entityType: "entry_credit",
+          entityId: credit.id,
+          data: { userId, tournamentId, reason: "payment_unmarked", paymentId: payment.id },
+        });
+      }
+    }
     const [payment] = await tx
       .delete(entryPayments)
       .where(

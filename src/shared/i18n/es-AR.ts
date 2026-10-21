@@ -190,9 +190,12 @@ export const esAR = {
   "registration.error.ineligible": "El roster no cumple las reglas de elegibilidad del torneo.",
   "registration.error.not_found": "No encontramos esa inscripción.",
   "payment.error.not_paid": "Ese jugador no tiene un pago registrado en este torneo.",
-  "payment.error.invalid_state": "Este torneo ya no acepta cambios en los pagos.",
+  "payment.error.invalid_state":
+    "Este torneo ya no acepta ese cambio de pago. Con la inscripción cerrada, solo se aceptan jugadores de rosters confirmados.",
+  "payment.error.credit_spent": "Ese pago ya se convirtió en un crédito que se usó o se anuló, así que no se puede desmarcar.",
   "credit.error.credit_unavailable": "Ese crédito ya no está disponible.",
   "credit.error.already_paid": "Ese jugador ya tiene un pago registrado en este torneo.",
-  "credit.error.invalid_state": "Este torneo ya no acepta pagos con crédito.",
+  "credit.error.invalid_state":
+    "Este torneo ya no acepta ese crédito. Con la inscripción cerrada, solo se aceptan jugadores de rosters confirmados.",
   "tournament.error.invalid_state": "El torneo no está en un estado que permita esta acción.",
 } as const;

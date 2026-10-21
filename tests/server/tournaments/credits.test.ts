@@ -203,3 +203,100 @@ test("manual credits can be granted and revoked", async () => {
   expect(await audits("credit.granted")).toHaveLength(2);
   expect(await audits("credit.revoked")).toHaveLength(1);
 });
+
+const creditOf = async (userId: string, sourceTournamentId: string) => {
+  const [row] = await testDb
+    .select()
+    .from(entryCredits)
+    .where(and(eq(entryCredits.userId, userId), eq(entryCredits.sourceTournamentId, sourceTournamentId)));
+  return row!;
+};
+
+test("unmarking a payment after close revokes the credit it became", async () => {
+  const tournament = await openTournament();
+  const b = await registered(tournament.id, "b");
+  await markPaid(testDb, admin, tournament.id, [b.ids[0]!], "MP");
+  await closeRegistration(testDb, tournament.id, NOW, null);
+
+  expect(await unmarkPaid(testDb, admin, tournament.id, b.ids[0]!)).toEqual({ ok: true });
+  expect((await creditOf(b.ids[0]!, tournament.id)).status).toBe("revoked");
+  const revoked = await audits("credit.revoked");
+  expect(revoked).toHaveLength(1);
+  expect(revoked[0]!.data).toMatchObject({ userId: b.ids[0], tournamentId: tournament.id, reason: "payment_unmarked" });
+});
+
+test("unmarking a credit payment after close leaves exactly one available credit", async () => {
+  const tournament = await openTournament();
+  const b = await registered(tournament.id, "b");
+  const earlier = await grantManualCredit(testDb, admin, b.ids[0]!, "Compensación");
+  expect(await applyCredit(testDb, admin, earlier.creditId, tournament.id)).toEqual({ ok: true });
+  await closeRegistration(testDb, tournament.id, NOW, null);
+
+  expect(await unmarkPaid(testDb, admin, tournament.id, b.ids[0]!)).toEqual({ ok: true });
+  const credits = await listCreditsForUser(testDb, b.ids[0]!);
+  expect(credits.find((c) => c.id === earlier.creditId)!.status).toBe("available");
+  expect((await creditOf(b.ids[0]!, tournament.id)).status).toBe("revoked");
+  expect(credits.filter((c) => c.status === "available")).toHaveLength(1);
+});
+
+test("unmarking after close is refused once the credit was spent", async () => {
+  const tournament = await openTournament();
+  const b = await registered(tournament.id, "b");
+  await markPaid(testDb, admin, tournament.id, [b.ids[0]!], "MP");
+  await closeRegistration(testDb, tournament.id, NOW, null);
+  const credit = await creditOf(b.ids[0]!, tournament.id);
+  const other = await openTournament();
+  expect(await applyCredit(testDb, admin, credit.id, other.id)).toEqual({ ok: true });
+
+  expect(await unmarkPaid(testDb, admin, tournament.id, b.ids[0]!)).toEqual({ ok: false, reason: "credit_spent" });
+  expect((await creditOf(b.ids[0]!, tournament.id)).status).toBe("used");
+  const payments = await testDb.select().from(entryPayments).where(eq(entryPayments.tournamentId, tournament.id));
+  expect(payments).toHaveLength(1);
+  expect(await audits("payment.unmarked")).toHaveLength(0);
+});
+
+test("after close, payments and credits only go to players on a confirmed roster", async () => {
+  const tournament = await openTournament();
+  const a = await registered(tournament.id, "a");
+  const b = await registered(tournament.id, "b");
+  await markPaid(testDb, admin, tournament.id, a.ids, "MP");
+  expect(await statusOf(a.registrationId)).toBe("confirmed");
+  await closeRegistration(testDb, tournament.id, NOW, null);
+
+  // b1 was dropped at close: a payment or credit could never count.
+  expect(await markPaid(testDb, admin, tournament.id, [b.ids[0]!], "MP")).toEqual({ ok: false, reason: "invalid_state" });
+  const credit = await grantManualCredit(testDb, admin, b.ids[0]!, "Compensación");
+  expect(await applyCredit(testDb, admin, credit.creditId, tournament.id)).toEqual({ ok: false, reason: "invalid_state" });
+  expect((await listCreditsForUser(testDb, b.ids[0]!))[0]!.status).toBe("available");
+
+  // A confirmed player can still be unmarked and marked again; the team stays confirmed.
+  expect(await unmarkPaid(testDb, admin, tournament.id, a.ids[0]!)).toEqual({ ok: true });
+  expect(await markPaid(testDb, admin, tournament.id, [a.ids[0]!], "MP-2")).toEqual({ ok: true, marked: 1 });
+  expect(await statusOf(a.registrationId)).toBe("confirmed");
+});
+
+test("cancelling during registration credits a pending team's paid players", async () => {
+  const tournament = await openTournament();
+  const b = await registered(tournament.id, "b");
+  await markPaid(testDb, admin, tournament.id, b.ids.slice(0, 2), "MP");
+
+  expect(await cancelTournament(testDb, admin, tournament.id, "Sin cupo")).toEqual({ ok: true, credited: 2 });
+  const credits = await creditsFrom(tournament.id);
+  expect(credits.map((c) => c.userId).sort()).toEqual(b.ids.slice(0, 2).sort());
+  expect(credits.every((c) => c.reason === "cancelled" && c.status === "available")).toBe(true);
+});
+
+test("applying a credit over a forfeited payment records the replacement", async () => {
+  const tournament = await openTournament();
+  const a = await registered(tournament.id, "a");
+  await markPaid(testDb, admin, tournament.id, a.ids, "MP-OLD");
+  await withdrawRegistration(testDb, a.captain, a.registrationId);
+  const credit = await grantManualCredit(testDb, admin, a.ids[1]!, "Compensación");
+
+  expect(await applyCredit(testDb, admin, credit.creditId, tournament.id)).toEqual({ ok: true });
+  const marked = (await audits("payment.marked")).map((r) => r.data as Record<string, unknown>);
+  expect(marked.find((d) => d.creditId === credit.creditId)).toMatchObject({
+    replacedForfeited: true,
+    previousReference: "MP-OLD",
+  });
+});

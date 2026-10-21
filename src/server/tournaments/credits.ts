@@ -3,7 +3,7 @@ import type { RegistrationStatus } from "../../shared/tournament";
 import { writeAudit } from "../audit";
 import type { Db, Executor } from "../db/client";
 import { entryCredits, entryPayments, registrationPlayers, registrations, tournaments } from "../db/schema";
-import { lockTournament, recomputeConfirmations, takesPayments } from "./confirmations";
+import { acceptsPaymentFor, lockTournament, recomputeConfirmations, takesPayments } from "./confirmations";
 
 export type EntryCredit = typeof entryCredits.$inferSelect;
 type CreditReason = EntryCredit["reason"];
@@ -135,11 +135,20 @@ export async function applyCredit(
   tournamentId: string,
 ): Promise<{ ok: true } | { ok: false; reason: "credit_unavailable" | "already_paid" | "invalid_state" }> {
   return db.transaction(async (tx) => {
-    if (!takesPayments(await lockTournament(tx, tournamentId))) return { ok: false, reason: "invalid_state" } as const;
+    const tournament = await lockTournament(tx, tournamentId);
+    if (!takesPayments(tournament)) return { ok: false, reason: "invalid_state" } as const;
     const [credit] = await tx.select().from(entryCredits).where(eq(entryCredits.id, creditId)).for("update");
     if (credit?.status !== "available") return { ok: false, reason: "credit_unavailable" } as const;
+    // After close, spending a credit on a player who can't play would burn it.
+    if (!(await acceptsPaymentFor(tx, tournament, [credit.userId]))) return { ok: false, reason: "invalid_state" } as const;
 
     // Like markPaid, a forfeited payment is replaced; a live one means the player already paid.
+    const [previous] = await tx
+      .select({ reference: entryPayments.reference })
+      .from(entryPayments)
+      .where(
+        and(eq(entryPayments.tournamentId, tournamentId), eq(entryPayments.userId, credit.userId), eq(entryPayments.forfeited, true)),
+      );
     const reference = `credit:${creditId}`;
     const [payment] = await tx
       .insert(entryPayments)
@@ -165,7 +174,13 @@ export async function applyCredit(
       action: "payment.marked",
       entityType: "entry_payment",
       entityId: payment.id,
-      data: { tournamentId, userId: credit.userId, reference, creditId },
+      data: {
+        tournamentId,
+        userId: credit.userId,
+        reference,
+        creditId,
+        ...(previous ? { replacedForfeited: true, previousReference: previous.reference } : {}),
+      },
     });
     await recomputeConfirmations(tx, tournamentId, new Date());
     return { ok: true } as const;
