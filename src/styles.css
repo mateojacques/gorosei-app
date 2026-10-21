@@ -1,9 +1,9 @@
 @import "tailwindcss";
-@import "@fontsource/big-shoulders-display/latin-800.css";
-@import "@fontsource/big-shoulders-display/latin-900.css";
-@import "@fontsource/hanken-grotesk/latin-400.css";
-@import "@fontsource/hanken-grotesk/latin-600.css";
-@import "@fontsource/hanken-grotesk/latin-700.css";
+@import "@fontsource/big-shoulders-display/latin-800";
+@import "@fontsource/big-shoulders-display/latin-900";
+@import "@fontsource/hanken-grotesk/latin-400";
+@import "@fontsource/hanken-grotesk/latin-600";
+@import "@fontsource/hanken-grotesk/latin-700";
 
 /* "En vivo": the broadcast at night. Dark only; every color is tinted toward cobalt (hue 230). */
 @theme {
@@ -49,5 +49,82 @@
   :focus-visible {
     outline: 2px solid var(--color-cobalt-light);
     outline-offset: 3px;
+  }
+}
+
+/* Stage light: a cobalt glow falling from above and one angled beam. Pure CSS, no imagery. */
+.stage::before,
+.stage::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.stage::before {
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 30% 0%, oklch(0.5 0.13 230 / 0.5), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, oklch(0.5 0.13 230 / 0.18), transparent 70%);
+}
+
+.stage::after {
+  top: -20%;
+  bottom: -20%;
+  left: 18%;
+  width: min(22rem, 45%);
+  background: linear-gradient(90deg, transparent, oklch(0.78 0.12 230 / 0.12) 50%, transparent);
+  transform: skewX(-18deg);
+  transform-origin: top;
+}
+
+/* One orchestrated page load. Everything is visible without it; reduced-motion users never get it. */
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 900ms var(--ease-out-expo) both;
+  }
+
+  .rise-delay {
+    animation-delay: 120ms;
+  }
+
+  .stage::after {
+    animation: beam-sweep 1400ms var(--ease-out-expo) 100ms both;
+  }
+
+  .prize-settle {
+    animation: prize-settle 1100ms var(--ease-out-expo) 350ms both;
+  }
+
+  .status-dot {
+    animation: on-air 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+  }
+}
+
+@keyframes beam-sweep {
+  from {
+    opacity: 0;
+    transform: translateX(-120%) skewX(-18deg);
+  }
+}
+
+@keyframes prize-settle {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: scale(1.08);
+  }
+}
+
+@keyframes on-air {
+  50% {
+    opacity: 0.35;
   }
 }
