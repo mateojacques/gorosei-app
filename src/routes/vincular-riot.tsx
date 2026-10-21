@@ -91,7 +91,7 @@ function LinkRiotPage() {
           <p>{t("riotLink.intro")}</p>
           <label className="flex flex-col">
             {t("riotLink.riotId")}
-            <input name="riotId" required placeholder="nombre#LAS" className="border px-2 py-1" />
+            <input name="riotId" required placeholder={t("riotLink.riotIdPlaceholder")} className="border px-2 py-1" />
           </label>
           <button type="submit" disabled={pending} className="border px-3 py-2 font-bold">
             {t("riotLink.start")}

@@ -30,6 +30,7 @@ export const esAR = {
   "riotLink.title": "Vinculá tu cuenta de Riot",
   "riotLink.intro": "Ingresá tu Riot ID (nombre#tag) del servidor LAS.",
   "riotLink.riotId": "Riot ID",
+  "riotLink.riotIdPlaceholder": "nombre#LAS",
   "riotLink.start": "Continuar",
   "riotLink.setIcon": "Cambiá tu ícono de perfil al ícono número {iconId} y después tocá «Ya lo cambié».",
   "riotLink.timeLeft": "Tiempo restante: {time}",
