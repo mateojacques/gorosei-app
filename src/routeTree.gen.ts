@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as VincularRiotRouteImport } from './routes/vincular-riot'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
+import { Route as JugadorRiotIdRouteImport } from './routes/jugador.$riotId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JugadorRiotIdRoute = JugadorRiotIdRouteImport.update({
+  id: '/jugador/$riotId',
+  path: '/jugador/$riotId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
+  '/jugador/$riotId': typeof JugadorRiotIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
+  '/jugador/$riotId': typeof JugadorRiotIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,21 @@ export interface FileRoutesById {
   '/ingresar': typeof IngresarRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
+  '/jugador/$riotId': typeof JugadorRiotIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ingresar' | '/vincular-riot' | '/api/$'
+  fullPaths:
+    '/' | '/ingresar' | '/vincular-riot' | '/api/$' | '/jugador/$riotId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ingresar' | '/vincular-riot' | '/api/$'
-  id: '__root__' | '/' | '/ingresar' | '/vincular-riot' | '/api/$'
+  to: '/' | '/ingresar' | '/vincular-riot' | '/api/$' | '/jugador/$riotId'
+  id:
+    | '__root__'
+    | '/'
+    | '/ingresar'
+    | '/vincular-riot'
+    | '/api/$'
+    | '/jugador/$riotId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +83,7 @@ export interface RootRouteChildren {
   IngresarRoute: typeof IngresarRoute
   VincularRiotRoute: typeof VincularRiotRoute
   ApiSplatRoute: typeof ApiSplatRoute
+  JugadorRiotIdRoute: typeof JugadorRiotIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +116,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/jugador/$riotId': {
+      id: '/jugador/$riotId'
+      path: '/jugador/$riotId'
+      fullPath: '/jugador/$riotId'
+      preLoaderRoute: typeof JugadorRiotIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +131,7 @@ const rootRouteChildren: RootRouteChildren = {
   IngresarRoute: IngresarRoute,
   VincularRiotRoute: VincularRiotRoute,
   ApiSplatRoute: ApiSplatRoute,
+  JugadorRiotIdRoute: JugadorRiotIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
