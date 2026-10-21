@@ -40,8 +40,13 @@ function AccountLink({ viewer }: { viewer: ViewerState }) {
     );
   }
   return (
-    <a href={`/jugador/${riotIdToSlug(viewer.riotAccount)}`} className={linkClass}>
-      {t("site.myProfile")}
-    </a>
+    <div className="flex items-center gap-1 sm:gap-3">
+      <Link to="/mis-equipos" className={buttonVariants({ variant: "ghost", size: "sm", className: "px-2" })}>
+        {t("site.myTeams")}
+      </Link>
+      <a href={`/jugador/${riotIdToSlug(viewer.riotAccount)}`} className={linkClass}>
+        {t("site.myProfile")}
+      </a>
+    </div>
   );
 }

@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { eq } from "drizzle-orm";
+import type { Role } from "./auth";
 
 export type ViewerState =
   | { signedIn: false }
-  | { signedIn: true; riotAccount: { gameName: string; tagLine: string } | null };
+  | { signedIn: true; role: Role; riotAccount: { gameName: string; tagLine: string } | null };
 
 export const getViewerState = createServerFn({ method: "GET" }).handler(async (): Promise<ViewerState> => {
   const { viewerStateOrSignedOut } = await import("./viewer");
@@ -22,5 +23,5 @@ async function loadViewerState(): Promise<ViewerState> {
     .select({ gameName: riotAccounts.gameName, tagLine: riotAccounts.tagLine })
     .from(riotAccounts)
     .where(eq(riotAccounts.userId, user.id));
-  return { signedIn: true, riotAccount: riotAccount ?? null };
+  return { signedIn: true, role: user.role, riotAccount: riotAccount ?? null };
 }

@@ -9,6 +9,6 @@ test("a failing viewer lookup degrades to signed out instead of breaking the pag
 });
 
 test("a successful lookup passes through", async () => {
-  const state = await viewerStateOrSignedOut(async () => ({ signedIn: true, riotAccount: null }));
-  expect(state).toEqual({ signedIn: true, riotAccount: null });
+  const state = await viewerStateOrSignedOut(async () => ({ signedIn: true, role: "player" as const, riotAccount: null }));
+  expect(state).toEqual({ signedIn: true, role: "player", riotAccount: null });
 });

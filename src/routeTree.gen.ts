@@ -11,9 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as IngresarRouteImport } from './routes/ingresar'
+import { Route as MisEquiposRouteImport } from './routes/mis-equipos'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as VincularRiotRouteImport } from './routes/vincular-riot'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
+import { Route as EquiposSlugRouteImport } from './routes/equipos.$slug'
+import { Route as EquiposNuevoRouteImport } from './routes/equipos.nuevo'
 import { Route as JugadorRiotIdRouteImport } from './routes/jugador.$riotId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -24,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const IngresarRoute = IngresarRouteImport.update({
   id: '/ingresar',
   path: '/ingresar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MisEquiposRoute = MisEquiposRouteImport.update({
+  id: '/mis-equipos',
+  path: '/mis-equipos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacidadRoute = PrivacidadRouteImport.update({
@@ -41,6 +49,16 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EquiposSlugRoute = EquiposSlugRouteImport.update({
+  id: '/equipos/$slug',
+  path: '/equipos/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EquiposNuevoRoute = EquiposNuevoRouteImport.update({
+  id: '/equipos/nuevo',
+  path: '/equipos/nuevo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JugadorRiotIdRoute = JugadorRiotIdRouteImport.update({
   id: '/jugador/$riotId',
   path: '/jugador/$riotId',
@@ -50,26 +68,35 @@ const JugadorRiotIdRoute = JugadorRiotIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
+  '/mis-equipos': typeof MisEquiposRoute
   '/privacidad': typeof PrivacidadRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
+  '/equipos/$slug': typeof EquiposSlugRoute
+  '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
+  '/mis-equipos': typeof MisEquiposRoute
   '/privacidad': typeof PrivacidadRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
+  '/equipos/$slug': typeof EquiposSlugRoute
+  '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ingresar': typeof IngresarRoute
+  '/mis-equipos': typeof MisEquiposRoute
   '/privacidad': typeof PrivacidadRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
+  '/equipos/$slug': typeof EquiposSlugRoute
+  '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
 }
 export interface FileRouteTypes {
@@ -77,34 +104,46 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ingresar'
+    | '/mis-equipos'
     | '/privacidad'
     | '/vincular-riot'
     | '/api/$'
+    | '/equipos/$slug'
+    | '/equipos/nuevo'
     | '/jugador/$riotId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/ingresar'
+    | '/mis-equipos'
     | '/privacidad'
     | '/vincular-riot'
     | '/api/$'
+    | '/equipos/$slug'
+    | '/equipos/nuevo'
     | '/jugador/$riotId'
   id:
     | '__root__'
     | '/'
     | '/ingresar'
+    | '/mis-equipos'
     | '/privacidad'
     | '/vincular-riot'
     | '/api/$'
+    | '/equipos/$slug'
+    | '/equipos/nuevo'
     | '/jugador/$riotId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   IngresarRoute: typeof IngresarRoute
+  MisEquiposRoute: typeof MisEquiposRoute
   PrivacidadRoute: typeof PrivacidadRoute
   VincularRiotRoute: typeof VincularRiotRoute
   ApiSplatRoute: typeof ApiSplatRoute
+  EquiposSlugRoute: typeof EquiposSlugRoute
+  EquiposNuevoRoute: typeof EquiposNuevoRoute
   JugadorRiotIdRoute: typeof JugadorRiotIdRoute
 }
 
@@ -122,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/ingresar'
       fullPath: '/ingresar'
       preLoaderRoute: typeof IngresarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mis-equipos': {
+      id: '/mis-equipos'
+      path: '/mis-equipos'
+      fullPath: '/mis-equipos'
+      preLoaderRoute: typeof MisEquiposRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacidad': {
@@ -145,6 +191,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/equipos/$slug': {
+      id: '/equipos/$slug'
+      path: '/equipos/$slug'
+      fullPath: '/equipos/$slug'
+      preLoaderRoute: typeof EquiposSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/equipos/nuevo': {
+      id: '/equipos/nuevo'
+      path: '/equipos/nuevo'
+      fullPath: '/equipos/nuevo'
+      preLoaderRoute: typeof EquiposNuevoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jugador/$riotId': {
       id: '/jugador/$riotId'
       path: '/jugador/$riotId'
@@ -158,9 +218,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   IngresarRoute: IngresarRoute,
+  MisEquiposRoute: MisEquiposRoute,
   PrivacidadRoute: PrivacidadRoute,
   VincularRiotRoute: VincularRiotRoute,
   ApiSplatRoute: ApiSplatRoute,
+  EquiposSlugRoute: EquiposSlugRoute,
+  EquiposNuevoRoute: EquiposNuevoRoute,
   JugadorRiotIdRoute: JugadorRiotIdRoute,
 }
 export const routeTree = rootRouteImport
