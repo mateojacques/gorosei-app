@@ -22,5 +22,8 @@ test("registerJobs schedules rank polling every 6 hours and registration close a
     "createQueue advance-tournaments",
     "schedule advance-tournaments * * * * *",
     "work advance-tournaments",
+    "createQueue create-editions",
+    "schedule create-editions * * * * *",
+    "work create-editions",
   ]);
 });

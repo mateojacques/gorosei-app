@@ -4,12 +4,14 @@ import { env } from "../env";
 import { riot } from "../riot";
 import { advanceTournaments } from "./advance-tournaments";
 import { closeDueRegistrations } from "./close-registrations";
+import { createDueEditions } from "./create-editions";
 import { pollAllRanks } from "./poll-ranks";
 
 const POLL_RANKS = "poll-ranks";
 const EVERY_SIX_HOURS = "0 */6 * * *";
 const CLOSE_REGISTRATIONS = "close-registrations";
 const ADVANCE_TOURNAMENTS = "advance-tournaments";
+const CREATE_EDITIONS = "create-editions";
 const EVERY_MINUTE = "* * * * *";
 
 export async function registerJobs(boss: PgBoss): Promise<void> {
@@ -30,6 +32,12 @@ export async function registerJobs(boss: PgBoss): Promise<void> {
   await boss.work(ADVANCE_TOURNAMENTS, async () => {
     const result = await advanceTournaments(db, new Date());
     console.info(`[jobs] ${ADVANCE_TOURNAMENTS}: opened ${result.opened}, closed ${result.closed}`);
+  });
+  await boss.createQueue(CREATE_EDITIONS);
+  await boss.schedule(CREATE_EDITIONS, EVERY_MINUTE);
+  await boss.work(CREATE_EDITIONS, async () => {
+    const result = await createDueEditions(db, new Date());
+    console.info(`[jobs] ${CREATE_EDITIONS}: created ${result.created}`);
   });
 }
 

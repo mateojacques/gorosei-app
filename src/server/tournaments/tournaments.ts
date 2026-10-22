@@ -2,13 +2,13 @@ import { asc, desc, eq, inArray, like, or } from "drizzle-orm";
 import { slugify } from "../../shared/slug";
 import type { TournamentInput } from "../../shared/tournament";
 import { writeAudit } from "../audit";
-import type { Db } from "../db/client";
+import type { Db, Executor } from "../db/client";
 import { tournaments } from "../db/schema";
 import { recomputeConfirmations } from "./confirmations";
 
 export type Tournament = typeof tournaments.$inferSelect;
 
-async function uniqueSlug(db: Db, base: string): Promise<string> {
+export async function uniqueTournamentSlug(db: Executor, base: string): Promise<string> {
   const rows = await db
     .select({ slug: tournaments.slug })
     .from(tournaments)
@@ -24,7 +24,7 @@ export async function createTournament(
   input: TournamentInput,
 ): Promise<{ id: string; slug: string }> {
   return db.transaction(async (tx) => {
-    const slug = await uniqueSlug(tx as unknown as Db, `${slugify(input.title)}-${input.edition}`);
+    const slug = await uniqueTournamentSlug(tx, `${slugify(input.title)}-${input.edition}`);
     const [row] = await tx
       .insert(tournaments)
       .values({ ...input, slug, createdBy: actorUserId })

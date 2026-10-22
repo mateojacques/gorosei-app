@@ -8,14 +8,53 @@ import { riotAccounts } from "./identity";
 
 const tz = (name: string) => timestamp(name, { withTimezone: true });
 
-export const tournaments = pgTable("tournaments", {
+export const tournaments = pgTable(
+  "tournaments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug").notNull().unique(),
+    title: text("title").notNull(),
+    edition: integer("edition").notNull(),
+    status: text("status").$type<TournamentStatus>().notNull().default("draft"),
+    startsAt: tz("starts_at").notNull(),
+    registrationClosesAt: tz("registration_closes_at").notNull(),
+    bracket: text("bracket").$type<"double_elimination" | "single_elimination">().notNull(),
+    draftMode: text("draft_mode").$type<"tournament_draft" | "blind_pick">().notNull(),
+    bestOf: integer("best_of").$type<1 | 3 | 5>().notNull(),
+    finalsBestOf: integer("finals_best_of").$type<1 | 3 | 5>().notNull(),
+    teamCap: integer("team_cap").notNull(),
+    maxSubs: integer("max_subs").notNull(),
+    subsCountForTeamRules: boolean("subs_count_for_team_rules").notNull(),
+    rankSource: text("rank_source").$type<(typeof RANK_SOURCES)[number]>().notNull().default("peak_season"),
+    eligibilityRules: jsonb("eligibility_rules").$type<EligibilityRule[]>().notNull(),
+    entryFeeArs: integer("entry_fee_ars").notNull(),
+    prizeGoalArs: integer("prize_goal_ars").notNull(),
+    prizeSplit: jsonb("prize_split").$type<number[]>().notNull(),
+    paymentInstructions: text("payment_instructions").notNull(),
+    rulesText: text("rules_text").notNull(),
+    streamUrl: text("stream_url").notNull(),
+    // The recurring template this edition was created from; editing either never changes the other.
+    templateId: uuid("template_id").references((): AnyPgColumn => tournamentTemplates.id),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id),
+    createdAt: tz("created_at").notNull().defaultNow(),
+    updatedAt: tz("updated_at").notNull().defaultNow(),
+  },
+  // One edition per template and start time, however many job runs race.
+  (t) => [uniqueIndex("tournaments_template_starts_at_idx").on(t.templateId, t.startsAt)],
+);
+
+export const tournamentTemplates = pgTable("tournament_templates", {
   id: uuid("id").primaryKey().defaultRandom(),
-  slug: text("slug").notNull().unique(),
   title: text("title").notNull(),
-  edition: integer("edition").notNull(),
-  status: text("status").$type<TournamentStatus>().notNull().default("draft"),
-  startsAt: tz("starts_at").notNull(),
-  registrationClosesAt: tz("registration_closes_at").notNull(),
+  // ART weekday (0 = Sunday) and "HH:MM" start time.
+  weekday: integer("weekday").notNull(),
+  startTime: text("start_time").notNull(),
+  registrationOpensDaysBefore: integer("registration_opens_days_before").notNull(),
+  registrationClosesMinutesBefore: integer("registration_closes_minutes_before").notNull(),
+  nextEdition: integer("next_edition").notNull(),
+  active: boolean("active").notNull(),
   bracket: text("bracket").$type<"double_elimination" | "single_elimination">().notNull(),
   draftMode: text("draft_mode").$type<"tournament_draft" | "blind_pick">().notNull(),
   bestOf: integer("best_of").$type<1 | 3 | 5>().notNull(),
@@ -23,7 +62,7 @@ export const tournaments = pgTable("tournaments", {
   teamCap: integer("team_cap").notNull(),
   maxSubs: integer("max_subs").notNull(),
   subsCountForTeamRules: boolean("subs_count_for_team_rules").notNull(),
-  rankSource: text("rank_source").$type<(typeof RANK_SOURCES)[number]>().notNull().default("peak_season"),
+  rankSource: text("rank_source").$type<(typeof RANK_SOURCES)[number]>().notNull(),
   eligibilityRules: jsonb("eligibility_rules").$type<EligibilityRule[]>().notNull(),
   entryFeeArs: integer("entry_fee_ars").notNull(),
   prizeGoalArs: integer("prize_goal_ars").notNull(),

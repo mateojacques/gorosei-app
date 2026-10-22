@@ -7,6 +7,7 @@ import type { Role } from "../../src/shared/pool";
 import { checkIns, entryPayments, rankSnapshots, registrations, riotAccounts, teamMembers, teams, tournaments } from "../../src/server/db/schema";
 import type { Rank } from "../../src/shared/rank";
 import { eq } from "drizzle-orm";
+import type { TemplateInput } from "../../src/shared/templates";
 import type { TournamentInput, TournamentStatus } from "../../src/shared/tournament";
 import { createTestRiotAccount, createTestUser, testDb } from "./db";
 import { FakeRiotClient } from "./fake-riot";
@@ -31,6 +32,32 @@ export const baseTournamentInput: TournamentInput = {
   paymentInstructions: "",
   rulesText: "",
   streamUrl: "",
+};
+
+/** A weekly Saturday 18:00 ART template whose next edition is #13. */
+export const baseTemplateInput: TemplateInput = {
+  title: "Copa Semanal LAS",
+  bracket: "double_elimination",
+  draftMode: "tournament_draft",
+  bestOf: 1,
+  finalsBestOf: 3,
+  teamCap: 16,
+  maxSubs: 1,
+  subsCountForTeamRules: false,
+  rankSource: "peak_season",
+  eligibilityRules: [{ id: "r1", type: "account_minimums", minLevel: 30 }],
+  entryFeeArs: 5000,
+  prizeGoalArs: 300000,
+  prizeSplit: [70, 30],
+  paymentInstructions: "Mercado Pago a gorosei",
+  rulesText: "Reglas",
+  streamUrl: "https://twitch.tv/gorosei",
+  weekday: 6,
+  startTime: "18:00",
+  registrationOpensDaysBefore: 7,
+  registrationClosesMinutesBefore: 120,
+  nextEdition: 13,
+  active: true,
 };
 
 let counter = 0;
