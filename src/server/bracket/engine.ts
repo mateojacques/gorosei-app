@@ -103,7 +103,9 @@ export function listEngineMatches(data: BracketData): EngineMatch[] {
     }
     const bye = m.opponent1 === null || m.opponent2 === null;
     const moot = phase === "reset" && grandFinalWonByWinnersSide.has(m.stage_id);
-    const status = bye || moot ? "archived" : (STATUS_NAMES[m.status] ?? "locked");
+    // The library archives played matches once the next round is done; only byes and moot resets are ours to hide.
+    const libraryStatus = STATUS_NAMES[m.status] ?? "locked";
+    const status = bye || moot ? "archived" : libraryStatus === "archived" ? "completed" : libraryStatus;
     const winner = m.opponent1?.result === "win" ? name(m.opponent1.id) : m.opponent2?.result === "win" ? name(m.opponent2.id) : null;
     return {
       id: Number(m.id),

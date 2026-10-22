@@ -38,8 +38,12 @@ export async function syncMatches(tx: Executor, tournamentId: string, now: Date)
   const existing = new Map((await tx.select().from(matches).where(eq(matches.tournamentId, tournamentId))).map((m) => [m.bmMatchId, m]));
 
   for (const m of listEngineMatches(bracket.data)) {
-    if (m.status === "archived") continue;
     const previous = existing.get(m.id);
+    if (m.status === "archived") {
+      // A reset match that became moot (grand final won from the winners side) disappears.
+      if (previous) await tx.delete(matches).where(eq(matches.id, previous.id));
+      continue;
+    }
     const reg1Id = m.team1;
     const reg2Id = m.team2;
     let status: MatchStatus;

@@ -184,7 +184,15 @@ export async function closeCheckIn(
       .from(registrations)
       .where(and(eq(registrations.tournamentId, tournamentId), eq(registrations.status, "confirmed")))
       .for("update");
-    const done = await tx.select().from(checkIns).where(eq(checkIns.tournamentId, tournamentId));
+    const activePlayers = await tx
+      .select({ registrationId: registrationPlayers.registrationId, userId: registrationPlayers.userId })
+      .from(registrationPlayers)
+      .where(and(eq(registrationPlayers.tournamentId, tournamentId), eq(registrationPlayers.active, true)));
+    const active = new Set(activePlayers.map((p) => `${p.registrationId}:${p.userId}`));
+    // Only players still on the roster count: a swapped-out player's check-in goes with them.
+    const done = (await tx.select().from(checkIns).where(eq(checkIns.tournamentId, tournamentId))).filter((c) =>
+      active.has(`${c.registrationId}:${c.userId}`),
+    );
     const survivors: string[] = [];
     let forfeited = 0;
     for (const registration of regs) {
