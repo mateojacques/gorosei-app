@@ -1,6 +1,8 @@
 export const CHECK_IN_OPENS_BEFORE_MINUTES = 60;
 export const CHECK_IN_CLOSES_BEFORE_MINUTES = 10;
 export const MIN_SHORT_HANDED = 3;
+/** A captain missing players is reminded this long before check-in closes. */
+export const CHECK_IN_REMINDER_BEFORE_CLOSE_MINUTES = 15;
 
 const MINUTE_MS = 60_000;
 

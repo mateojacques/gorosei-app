@@ -3,6 +3,7 @@ import { db } from "../db/client";
 import { env } from "../env";
 import { riot } from "../riot";
 import { advanceTournaments } from "./advance-tournaments";
+import { sendCheckInReminders } from "./check-in-reminders";
 import { closeDueRegistrations } from "./close-registrations";
 import { createDueEditions } from "./create-editions";
 import { pollAllRanks } from "./poll-ranks";
@@ -32,6 +33,8 @@ export async function registerJobs(boss: PgBoss): Promise<void> {
   await boss.work(ADVANCE_TOURNAMENTS, async () => {
     const result = await advanceTournaments(db, new Date());
     console.info(`[jobs] ${ADVANCE_TOURNAMENTS}: opened ${result.opened}, closed ${result.closed}`);
+    const reminders = await sendCheckInReminders(db, new Date());
+    console.info(`[jobs] ${ADVANCE_TOURNAMENTS}: reminded ${reminders.reminded} captains`);
   });
   await boss.createQueue(CREATE_EDITIONS);
   await boss.schedule(CREATE_EDITIONS, EVERY_MINUTE);

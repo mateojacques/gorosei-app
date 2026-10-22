@@ -5,6 +5,7 @@ import type { Db, Executor } from "../db/client";
 import { brackets, matchReports, matches, registrationPlayers, registrations, teams, tournaments } from "../db/schema";
 import type { Tournament } from "../tournaments/tournaments";
 import type { MatchStats } from "../matchday/stats";
+import { notifyMatchReady } from "../notifications/matchday";
 import { createBracket, listEngineMatches } from "./engine";
 
 /** Seeds the confirmed teams by average rank and stores the bracket; matches are mirrored by syncMatches. */
@@ -71,8 +72,16 @@ export async function syncMatches(tx: Executor, tournamentId: string, now: Date)
       ...(becameOpen ? { openedAt: now } : {}),
       ...(!completed && previous?.status === "completed" ? { confirmedBy: null, confirmedAt: null } : {}),
     };
+    let id = previous?.id;
     if (previous) await tx.update(matches).set(values).where(eq(matches.id, previous.id));
-    else await tx.insert(matches).values({ ...values, openedAt: becameOpen ? now : null });
+    else {
+      const [inserted] = await tx
+        .insert(matches)
+        .values({ ...values, openedAt: becameOpen ? now : null })
+        .returning({ id: matches.id });
+      id = inserted?.id;
+    }
+    if (becameOpen && id) await notifyMatchReady(tx, { id, tournamentId, reg1Id, reg2Id, openedAt: now });
   }
 }
 

@@ -15,6 +15,7 @@ import {
   snapshotWithAccount,
 } from "../tournaments/registrations";
 import type { Tournament } from "../tournaments/tournaments";
+import { notifyMatchReady, notifyResult } from "../notifications/matchday";
 import { lockMatch } from "./reports";
 
 export type ModRejection =
@@ -118,6 +119,7 @@ export async function confirmMatch(
       entityId: matchId,
       data: { tournamentId: tournament.id, ...score, source, previousStatus: match.status },
     });
+    await notifyResult(tx, matchId);
     return { ok: true, finished } as const;
   });
   if (committed.ok) void announceMatch(db, matchId);
@@ -152,6 +154,7 @@ export async function forfeitMatch(
       entityId: matchId,
       data: { tournamentId: tournament.id, forfeitingRegistrationId, previousStatus: match.status },
     });
+    await notifyResult(tx, matchId);
     return { ok: true, finished } as const;
   });
   if (committed.ok) void announceMatch(db, matchId);
@@ -201,6 +204,8 @@ export async function resetMatch(db: Db, moderatorId: string, matchId: string): 
         openedAt: now,
       })
       .where(eq(matches.id, matchId));
+    const [reopened] = await tx.select().from(matches).where(eq(matches.id, matchId));
+    if (reopened) await notifyMatchReady(tx, reopened);
     await writeAudit(tx, {
       actorUserId: moderatorId,
       action: "match.reset",

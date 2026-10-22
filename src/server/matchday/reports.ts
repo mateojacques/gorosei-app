@@ -4,6 +4,7 @@ import { type ReportInput, type MatchStatus, validateScore } from "../../shared/
 import { writeAudit } from "../audit";
 import type { Db, Executor } from "../db/client";
 import { matchMessages, matchReports, matches, registrationPlayers, teams, registrations } from "../db/schema";
+import { notifyDisputed } from "../notifications/matchday";
 
 export type ReportRejection =
   | "not_found"
@@ -111,6 +112,7 @@ export async function reportResult(
       status = r1.score1 === r2.score1 && r1.score2 === r2.score2 ? "reported" : "disputed";
     }
     await tx.update(matches).set({ status }).where(eq(matches.id, matchId));
+    if (status === "disputed" && match.status !== "disputed") await notifyDisputed(tx, match);
     await writeAudit(tx, {
       actorUserId: captainId,
       action: "match.reported",

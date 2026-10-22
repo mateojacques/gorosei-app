@@ -7,6 +7,8 @@ import { checkIns, entryPayments, registrationPlayers, registrations, teams, tou
 import { startBracket } from "../bracket/bracket";
 import { lockTournament } from "../tournaments/confirmations";
 import { cancelLockedTournament } from "../tournaments/credits";
+import { notify } from "../notifications/notify";
+import { rosterUserIds, tournamentRef } from "../notifications/recipients";
 
 export type CheckInRejection = "not_open" | "not_on_roster" | "registration_inactive" | "not_captain" | "invalid_state";
 type Result = { ok: true } | { ok: false; reason: CheckInRejection };
@@ -165,6 +167,15 @@ export async function openCheckIn(
       entityId: tournamentId,
       data: { forced: opts.force === true },
     });
+    const confirmed = await tx
+      .select({ id: registrations.id })
+      .from(registrations)
+      .where(and(eq(registrations.tournamentId, tournamentId), eq(registrations.status, "confirmed")));
+    const ref = await tournamentRef(tx, tournamentId);
+    const closesAt = checkInWindow(tournament.startsAt).closesAt.toISOString();
+    for (const { id } of confirmed) {
+      await notify(tx, await rosterUserIds(tx, id), { kind: "check_in_open", tournament: ref, closesAt }, `check_in_open:${id}`);
+    }
     return { ok: true } as const;
   });
   if (result.ok) announceTournament(tournamentId);
