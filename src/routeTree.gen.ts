@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as MisEquiposRouteImport } from './routes/mis-equipos'
 import { Route as ModRouteImport } from './routes/mod'
+import { Route as NotificacionesRouteImport } from './routes/notificaciones'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -60,6 +61,11 @@ const MisEquiposRoute = MisEquiposRouteImport.update({
 const ModRoute = ModRouteImport.update({
   id: '/mod',
   path: '/mod',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificacionesRoute = NotificacionesRouteImport.update({
+  id: '/notificaciones',
+  path: '/notificaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacidadRoute = PrivacidadRouteImport.update({
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/ingresar': typeof IngresarRoute
   '/mis-equipos': typeof MisEquiposRoute
   '/mod': typeof ModRoute
+  '/notificaciones': typeof NotificacionesRoute
   '/privacidad': typeof PrivacidadRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/ingresar': typeof IngresarRoute
   '/mis-equipos': typeof MisEquiposRoute
   '/mod': typeof ModRoute
+  '/notificaciones': typeof NotificacionesRoute
   '/privacidad': typeof PrivacidadRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -240,6 +248,7 @@ export interface FileRoutesById {
   '/ingresar': typeof IngresarRoute
   '/mis-equipos': typeof MisEquiposRoute
   '/mod': typeof ModRoute
+  '/notificaciones': typeof NotificacionesRoute
   '/privacidad': typeof PrivacidadRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/mis-equipos'
     | '/mod'
+    | '/notificaciones'
     | '/privacidad'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/mis-equipos'
     | '/mod'
+    | '/notificaciones'
     | '/privacidad'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -329,6 +340,7 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/mis-equipos'
     | '/mod'
+    | '/notificaciones'
     | '/privacidad'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -359,6 +371,7 @@ export interface RootRouteChildren {
   IngresarRoute: typeof IngresarRoute
   MisEquiposRoute: typeof MisEquiposRoute
   ModRoute: typeof ModRoute
+  NotificacionesRoute: typeof NotificacionesRoute
   PrivacidadRoute: typeof PrivacidadRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -412,6 +425,13 @@ declare module '@tanstack/react-router' {
       path: '/mod'
       fullPath: '/mod'
       preLoaderRoute: typeof ModRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notificaciones': {
+      id: '/notificaciones'
+      path: '/notificaciones'
+      fullPath: '/notificaciones'
+      preLoaderRoute: typeof NotificacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacidad': {
@@ -597,6 +617,7 @@ const rootRouteChildren: RootRouteChildren = {
   IngresarRoute: IngresarRoute,
   MisEquiposRoute: MisEquiposRoute,
   ModRoute: ModRoute,
+  NotificacionesRoute: NotificacionesRoute,
   PrivacidadRoute: PrivacidadRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

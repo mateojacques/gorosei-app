@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { InboxLink } from "@/components/site/inbox-link";
 import { buttonVariants } from "@/components/ui/button";
 import type { ViewerState } from "@/server/viewer.functions";
 import { t } from "@/shared/i18n";
@@ -30,6 +31,7 @@ export function SiteHeader({ viewer }: { viewer: ViewerState }) {
               {t("site.admin")}
             </Link>
           )}
+          {viewer.signedIn && <InboxLink userId={viewer.userId} unread={viewer.unreadNotifications} />}
         </nav>
         <nav aria-label={t("site.nav")}>
           <AccountLink viewer={viewer} />

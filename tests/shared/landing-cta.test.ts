@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { getLandingCta } from "../../src/shared/landing-cta";
 
-const linked = { signedIn: true as const, role: "player" as const, riotAccount: { gameName: "Señor Café", tagLine: "LAS" } };
+const linked = { signedIn: true as const, userId: "u", role: "player" as const, riotAccount: { gameName: "Señor Café", tagLine: "LAS" }, unreadNotifications: 0 };
 const open = { slug: "copa-semanal-las-1", status: "registration_open" as const };
 
 test("signed-out visitors are asked to create an account", () => {
@@ -9,7 +9,7 @@ test("signed-out visitors are asked to create an account", () => {
 });
 
 test("signed-in visitors without Riot are asked to link it", () => {
-  expect(getLandingCta({ signedIn: true, role: "player", riotAccount: null }, open)).toEqual({
+  expect(getLandingCta({ signedIn: true, userId: "u", role: "player", riotAccount: null, unreadNotifications: 0 }, open)).toEqual({
     labelKey: "cup.cta.linkRiot",
     href: "/vincular-riot",
   });

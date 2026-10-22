@@ -1,11 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { eq } from "drizzle-orm";
 import type { Role } from "./auth";
 
 export type ViewerState =
   | { signedIn: false }
-  | { signedIn: true; role: Role; riotAccount: { gameName: string; tagLine: string } | null };
+  | {
+      signedIn: true;
+      userId: string;
+      role: Role;
+      riotAccount: { gameName: string; tagLine: string } | null;
+      unreadNotifications: number;
+    };
 
 export const getViewerState = createServerFn({ method: "GET" }).handler(async (): Promise<ViewerState> => {
   const { viewerStateOrSignedOut } = await import("./viewer");
@@ -18,12 +23,8 @@ async function loadViewerState(): Promise<ViewerState> {
   const user = await getSessionUser(getRequestHeaders());
   if (!user) return { signedIn: false };
 
-  const [{ db }, { riotAccounts }] = await Promise.all([import("./db/client"), import("./db/schema")]);
-  const [riotAccount] = await db
-    .select({ gameName: riotAccounts.gameName, tagLine: riotAccounts.tagLine })
-    .from(riotAccounts)
-    .where(eq(riotAccounts.userId, user.id));
-  return { signedIn: true, role: user.role, riotAccount: riotAccount ?? null };
+  const [{ db }, { viewerStateFor }] = await Promise.all([import("./db/client"), import("./viewer")]);
+  return viewerStateFor(db, user);
 }
 
 /** The public origin for canonical URLs, Open Graph and JSON-LD. */

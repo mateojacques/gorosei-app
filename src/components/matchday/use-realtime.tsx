@@ -10,8 +10,14 @@ export type RealtimeMessage = { channel: string; type: string; data?: unknown };
 /**
  * Keeps the page in step with the server. Events say "something changed" and the page reloads its data;
  * while the socket is down a 15 s poll does the same, so the page works with or without WebSockets.
+ * `siteWide` subscribers (the header, on every page) skip the poll and the reload on connect: only their events reload.
  */
-export function useRealtime(channels: string[], onEvent?: (message: RealtimeMessage) => void): void {
+export function useRealtime(
+  channels: string[],
+  onEvent?: (message: RealtimeMessage) => void,
+  opts: { siteWide?: boolean } = {},
+): void {
+  const siteWide = opts.siteWide ?? false;
   const router = useRouter();
   const handler = useRef(onEvent);
   handler.current = onEvent;
@@ -30,6 +36,7 @@ export function useRealtime(channels: string[], onEvent?: (message: RealtimeMess
       settle = setTimeout(() => void router.invalidate(), SETTLE_MS);
     };
     const startPolling = () => {
+      if (siteWide) return;
       poll ??= setInterval(() => void router.invalidate(), POLL_MS);
     };
     const stopPolling = () => {
@@ -51,7 +58,7 @@ export function useRealtime(channels: string[], onEvent?: (message: RealtimeMess
         stopPolling();
         for (const channel of key.split("|").filter(Boolean)) socket?.send(JSON.stringify({ type: "subscribe", channel }));
         // Anything published while the socket was down is picked up here.
-        refresh();
+        if (!siteWide) refresh();
       };
       socket.onmessage = (event) => {
         let message: RealtimeMessage;
@@ -82,5 +89,5 @@ export function useRealtime(channels: string[], onEvent?: (message: RealtimeMess
       stopPolling();
       socket?.close();
     };
-  }, [key, router]);
+  }, [key, router, siteWide]);
 }

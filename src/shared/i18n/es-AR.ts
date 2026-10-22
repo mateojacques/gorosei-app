@@ -299,6 +299,14 @@ export const esAR = {
   "tournament.col.payments": "Pagos",
 
   "site.admin": "Admin",
+  "inbox.title": "Avisos",
+  "inbox.link": "Avisos",
+  "inbox.linkUnread": "Avisos, {count} sin leer",
+  "inbox.unread": "sin leer",
+  "inbox.empty": "Todavía no tenés avisos. Te avisamos acá cuando te inviten a un equipo, se confirme tu pago o tu partida esté lista.",
+  "inbox.email": "Recibir avisos por email",
+  "inbox.emailHint": "Te mandamos un mail con cada aviso. Los avisos de acá siguen llegando igual.",
+
   "email.open": "Ver en Gorosei",
   "email.footer": "Te llega este mail porque tenés los avisos por email activados. Podés apagarlos en {link}",
   "email.footerLead": "Te llega este mail porque tenés los avisos por email activados. Podés apagarlos en",
