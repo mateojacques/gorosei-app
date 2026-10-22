@@ -1,6 +1,7 @@
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import { useId, useState } from "react";
 import { Field, FormAlert } from "../components/site/form";
+import { AdminRegistrations, PlayerPanel } from "../components/tournament/admin-registrations";
 import { TournamentStatusTag } from "../components/tournament/registration-status";
 import { TournamentForm, toFormValues } from "../components/tournament/tournament-form";
 import { Button } from "../components/ui/button";
@@ -8,6 +9,7 @@ import { Input } from "../components/ui/input";
 import {
   cancelTournamentFn,
   closeRegistrationFn,
+  getAdminRegistrations,
   getAdminTournament,
   openRegistrationFn,
   updateTournamentFn,
@@ -15,9 +17,19 @@ import {
 import { t } from "../shared/i18n";
 
 export const Route = createFileRoute("/admin/torneos/$id")({
-  loader: ({ params }) => getAdminTournament({ data: { id: params.id } }),
+  loader: async ({ params }) => {
+    const [tournament, registrations] = await Promise.all([
+      getAdminTournament({ data: { id: params.id } }),
+      getAdminRegistrations({ data: { id: params.id } }),
+    ]);
+    return { tournament, registrations };
+  },
   head: ({ loaderData }) => ({
-    meta: [{ title: `${loaderData ? `${loaderData.title} #${loaderData.edition}` : t("admin.error.not_found")} · ${t("app.name")}` }],
+    meta: [
+      {
+        title: `${loaderData ? `${loaderData.tournament.title} #${loaderData.tournament.edition}` : t("admin.error.not_found")} · ${t("app.name")}`,
+      },
+    ],
   }),
   component: AdminTournamentPage,
 });
@@ -25,7 +37,7 @@ export const Route = createFileRoute("/admin/torneos/$id")({
 type Tournament = Awaited<ReturnType<typeof getAdminTournament>>;
 
 function AdminTournamentPage() {
-  const tournament = Route.useLoaderData();
+  const { tournament, registrations } = Route.useLoaderData();
   return (
     <div className="flex flex-col gap-12">
       <div>
@@ -43,6 +55,8 @@ function AdminTournamentPage() {
         </div>
       </div>
       <Lifecycle tournament={tournament} />
+      <AdminRegistrations tournamentId={tournament.id} free={tournament.entryFeeArs === 0} registrations={registrations} />
+      <PlayerPanel />
       <section className="max-w-3xl">
         <TournamentForm
           // Remount with fresh values after every save or lifecycle change.
