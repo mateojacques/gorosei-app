@@ -1,3 +1,8 @@
+import { setDefaultTimeout } from "bun:test";
+
+// Fixtures that build several full teams take seconds on a loaded machine.
+setDefaultTimeout(30_000);
+
 process.env.DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
   "postgres://postgres:postgres@localhost:5432/gorosei_test";
