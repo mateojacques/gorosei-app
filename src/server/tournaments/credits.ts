@@ -3,6 +3,8 @@ import type { RegistrationStatus } from "../../shared/tournament";
 import { writeAudit } from "../audit";
 import type { Db, Executor } from "../db/client";
 import { entryCredits, entryPayments, poolEntries, registrationPlayers, registrations, tournaments } from "../db/schema";
+import { notify } from "../notifications/notify";
+import { tournamentRef } from "../notifications/recipients";
 import { autoPlacePool } from "../pool/auto-place";
 import type { Tournament } from "./tournaments";
 import { acceptsPaymentFor, lockTournament, recomputeConfirmations, takesPayments } from "./confirmations";
@@ -29,6 +31,12 @@ async function grantCredit(
     entityId: credit.id,
     data: { userId: input.userId, sourceTournamentId: input.sourceTournamentId, reason: input.reason },
   });
+  await notify(
+    tx,
+    [input.userId],
+    { kind: "credit_granted", reason: input.reason, tournament: await tournamentRef(tx, input.sourceTournamentId) },
+    `credit:${credit.id}`,
+  );
   return true;
 }
 
@@ -226,6 +234,7 @@ export async function grantManualCredit(
       entityId: credit!.id,
       data: { userId, sourceTournamentId: null, reason: "manual", note },
     });
+    await notify(tx, [userId], { kind: "credit_granted", reason: "manual", tournament: null }, `credit:${credit!.id}`);
     return { ok: true, creditId: credit!.id } as const;
   });
 }

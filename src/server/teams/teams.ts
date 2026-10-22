@@ -15,6 +15,8 @@ import {
   tournaments,
 } from "../db/schema";
 import { getCurrentRank } from "../identity/ranks";
+import { notify } from "../notifications/notify";
+import { riotIdOf } from "../notifications/recipients";
 import { lockTournament, recomputeConfirmations } from "../tournaments/confirmations";
 import { placementsFor } from "../tournaments/results";
 import type { TournamentStatus } from "../../shared/tournament";
@@ -262,6 +264,7 @@ export async function inviteByRiotId(
       .insert(teamRequests)
       .values({ teamId, userId: account.userId, kind: "invite" })
       .returning({ id: teamRequests.id });
+    await notify(tx, [account.userId], { kind: "team_invite", teamName: team.name, tournament: null }, `invite:${request!.id}`);
     return { ok: true, requestId: request!.id } as const;
   });
 }
@@ -276,13 +279,20 @@ export async function requestToJoin(
   try {
     return await db.transaction(async (tx) => {
       if (!(await hasRiotAccount(tx, userId))) return { ok: false, reason: "riot_required" } as const;
-      if (!(await lockTeam(tx, teamId))) return { ok: false, reason: "team_not_found" } as const;
+      const team = await lockTeam(tx, teamId);
+      if (!team) return { ok: false, reason: "team_not_found" } as const;
       if (await isMember(tx, teamId, userId)) return { ok: false, reason: "already_member" } as const;
       if (await hasPendingRequest(tx, teamId, userId)) return { ok: false, reason: "already_pending" } as const;
       const [request] = await tx
         .insert(teamRequests)
         .values({ teamId, userId, kind: "join_request" })
         .returning({ id: teamRequests.id });
+      await notify(
+        tx,
+        [team.captainUserId],
+        { kind: "join_request", teamName: team.name, playerRiotId: await riotIdOf(tx, userId), tournament: null },
+        `request:${request!.id}`,
+      );
       return { ok: true, requestId: request!.id } as const;
     });
   } catch (error) {
@@ -325,6 +335,14 @@ export async function respondToRequest(
         entityId: team.id,
         data: { userId: request.userId, via: request.kind },
       });
+      if (request.kind === "join_request") {
+        await notify(
+          tx,
+          [request.userId],
+          { kind: "request_accepted", teamName: team.name, teamSlug: team.slug },
+          `accepted:${requestId}`,
+        );
+      }
     }
     return { ok: true } as const;
   });

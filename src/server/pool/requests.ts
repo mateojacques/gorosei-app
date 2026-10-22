@@ -10,6 +10,8 @@ import { evaluateRegistration, exemptRuleIdsFor, updateRoster } from "../tournam
 import type { RegistrationDeps } from "../tournaments/registrations";
 import { paidUserIds } from "../tournaments/confirmations";
 import type { Tournament } from "../tournaments/tournaments";
+import { notify } from "../notifications/notify";
+import { riotIdOf, tournamentRef } from "../notifications/recipients";
 import { getAvailableEntry, getPayingEntry, getPoolEntry } from "./pool";
 
 export type OpenTeam = {
@@ -113,6 +115,17 @@ async function insertRequest(
         .insert(teamRequests)
         .values({ teamId: team!.id, userId, kind, tournamentId: context.tournament.id })
         .returning({ id: teamRequests.id });
+      const tournament = await tournamentRef(tx, context.tournament.id);
+      if (kind === "invite") {
+        await notify(tx, [userId], { kind: "team_invite", teamName: team!.name, tournament }, `invite:${request!.id}`);
+      } else {
+        await notify(
+          tx,
+          [team!.captainUserId],
+          { kind: "join_request", teamName: team!.name, playerRiotId: await riotIdOf(tx, userId), tournament },
+          `request:${request!.id}`,
+        );
+      }
       return { ok: true, requestId: request!.id };
     });
   } catch (error) {
@@ -272,6 +285,14 @@ export async function respondToPoolRequest(
             entityId: registration.id,
             data: { userId: playerId, teamId: team.id, via: request.kind === "invite" ? "invite" : "request", requestId },
           });
+          if (request.kind === "join_request") {
+            await notify(
+              tx,
+              [playerId],
+              { kind: "request_accepted", teamName: team.name, teamSlug: team.slug },
+              `accepted:${requestId}`,
+            );
+          }
         },
       },
     );

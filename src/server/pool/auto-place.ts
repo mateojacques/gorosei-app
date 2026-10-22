@@ -6,6 +6,8 @@ import type { PlayerSnapshot } from "../../shared/eligibility";
 import { writeAudit } from "../audit";
 import type { Executor } from "../db/client";
 import { poolEntries, registrationPlayers, registrations, teamMembers, teams } from "../db/schema";
+import { notify } from "../notifications/notify";
+import { tournamentRef } from "../notifications/recipients";
 import { createTeamRow } from "../teams/teams";
 import { snapshotFromStored } from "../tournaments/registrations";
 import type { Tournament } from "../tournaments/tournaments";
@@ -81,6 +83,7 @@ export async function autoPlacePool(
   let tagCounter = await nextTagCounter(tx);
   let nameFrom = 1;
   let placed = 0;
+  const ref = plan.teams.length > 0 ? await tournamentRef(tx, tournament.id) : null;
 
   for (const planned of plan.teams) {
     const { name, n } = await availableName(tx, tournament.edition, nameFrom);
@@ -115,6 +118,22 @@ export async function autoPlacePool(
       entityId: registration!.id,
       data: { tournamentId: tournament.id, teamId: team.id, captain: planned.captainUserId, members: planned.members },
     });
+    const riotId = (userId: string) => snapshots.get(userId)!.snapshot.riotId;
+    for (const member of planned.members) {
+      await notify(
+        tx,
+        [member.userId],
+        {
+          kind: "auto_placed",
+          teamName: name,
+          teamSlug: team.slug,
+          teammates: planned.members.filter((m) => m.userId !== member.userId).map((m) => riotId(m.userId)),
+          captain: member.userId === planned.captainUserId,
+          tournament: ref!,
+        },
+        `auto_placed:${registration!.id}`,
+      );
+    }
     placed += planned.members.length;
   }
   return { teams: plan.teams.length, placed };

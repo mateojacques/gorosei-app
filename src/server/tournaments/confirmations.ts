@@ -5,6 +5,8 @@ import type { RegistrationStatus } from "../../shared/tournament";
 import { writeAudit } from "../audit";
 import type { Db, Executor } from "../db/client";
 import { eligibilityExceptions, entryCredits, entryPayments, registrationPlayers, registrations, tournaments } from "../db/schema";
+import { notify } from "../notifications/notify";
+import { rosterUserIds, teamNameOf, tournamentRef } from "../notifications/recipients";
 import { evaluateRegistration } from "./registrations";
 import type { Tournament } from "./tournaments";
 
@@ -144,6 +146,19 @@ export async function recomputeConfirmations(tx: Executor, tournamentId: string,
         entityId: registration.id,
         data: { tournamentId, from: registration.status, to: status },
       });
+      // Keyed by registration: a team that drops back to pending and confirms again is told once.
+      if (status === "confirmed") {
+        await notify(
+          tx,
+          await rosterUserIds(tx, registration.id),
+          {
+            kind: "registration_confirmed",
+            teamName: await teamNameOf(tx, registration.id),
+            tournament: await tournamentRef(tx, tournamentId),
+          },
+          `confirmed:${registration.id}`,
+        );
+      }
     }
   }
 }
@@ -163,6 +178,7 @@ export async function markPaid(
       return { ok: false, reason: "invalid_state" } as const;
     }
     let marked = 0;
+    const ref = await tournamentRef(tx, tournamentId);
     for (const userId of new Set(userIds)) {
       // Already-paid players are skipped; a forfeited payment is replaced by the new one.
       const [previous] = await tx
@@ -194,6 +210,7 @@ export async function markPaid(
           ...(previous ? { replacedForfeited: true, previousReference: previous.reference } : {}),
         },
       });
+      await notify(tx, [userId], { kind: "payment_recorded", tournament: ref }, `payment:${row.id}`);
     }
     await recomputeConfirmations(tx, tournamentId, new Date());
     return { ok: true, marked } as const;
