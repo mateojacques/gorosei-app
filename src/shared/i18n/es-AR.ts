@@ -257,6 +257,7 @@ export const esAR = {
     "Este torneo ya no acepta ese crédito. Con la inscripción cerrada, solo se aceptan jugadores de rosters confirmados.",
   "tournament.error.invalid_state": "El torneo no está en un estado que permita esta acción.",
 
+  "tournament.error.registrationTooLate": "La inscripción tiene que cerrar al menos 1 hora antes del inicio.",
   "tournament.notFound": "No encontramos ese torneo.",
   "tournament.metaDescription": "{title} #{edition}: torneo 5v5 de League of Legends en LAS. Inscripción, reglas y premio.",
   "tournament.edition": "LAS · Edición #{edition}",

@@ -38,3 +38,9 @@ test("rejects a prize split not summing to 100", () => {
 test("rejects more than 2 subs", () => {
   expect(tournamentInputSchema.safeParse({ ...valid, maxSubs: 3 }).success).toBe(false);
 });
+
+test("registration must close at least an hour before the start", () => {
+  const closes = (iso: string) => tournamentInputSchema.safeParse({ ...valid, registrationClosesAt: iso }).success;
+  expect(closes("2026-11-01T19:30:00Z")).toBe(false);
+  expect(closes("2026-11-01T19:00:00Z")).toBe(true);
+});

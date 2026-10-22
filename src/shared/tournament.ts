@@ -19,6 +19,8 @@ export const RANK_SOURCES = ["current", "peak_season"] as const;
 export const REGISTRATION_STATUSES = ["pending", "confirmed", "waitlisted", "withdrawn", "dropped"] as const;
 export type RegistrationStatus = (typeof REGISTRATION_STATUSES)[number];
 
+const HOUR_MS = 3_600_000;
+
 const bestOf = z.union([z.literal(1), z.literal(3), z.literal(5)]);
 
 export const tournamentInputSchema = z
@@ -47,9 +49,9 @@ export const tournamentInputSchema = z
     rulesText: z.string().max(20000),
     streamUrl: z.union([z.url(), z.literal("")]),
   })
-  .refine((v) => v.registrationClosesAt < v.startsAt, {
+  .refine((v) => v.registrationClosesAt.getTime() <= v.startsAt.getTime() - HOUR_MS, {
     path: ["registrationClosesAt"],
-    message: "registration must close before the start",
+    message: "tournament.error.registrationTooLate",
   });
 
 export type TournamentInput = z.infer<typeof tournamentInputSchema>;
