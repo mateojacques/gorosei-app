@@ -2,6 +2,7 @@ import type { Db } from "../db/client";
 import { describeRule } from "../../shared/eligibility";
 import { prizePoolArs, splitPrize } from "../../shared/prize";
 import type { RegistrationStatus } from "../../shared/tournament";
+import { countPool } from "../pool/pool";
 import { listRegistrations } from "./registrations";
 import { type Tournament, getTournamentBySlug } from "./tournaments";
 
@@ -33,6 +34,8 @@ export type TournamentView = Pick<
   prizeShares: number[];
   goalShares: number[];
   confirmedCount: number;
+  /** Free agents waiting for a team. */
+  poolCount: number;
   registrations: { teamName: string; teamSlug: string; status: RegistrationStatus; paidCount: number; starterCount: number }[];
   rules: string[];
 };
@@ -41,12 +44,13 @@ export type TournamentView = Pick<
 export async function getTournamentView(db: Db, slug: string): Promise<TournamentView | null> {
   const tournament = await getTournamentBySlug(db, slug);
   if (!tournament || tournament.status === "draft") return null;
-  return buildTournamentView(tournament, await listRegistrations(db, tournament.id));
+  return buildTournamentView(tournament, await listRegistrations(db, tournament.id), await countPool(db, tournament.id));
 }
 
 export function buildTournamentView(
   tournament: Tournament,
   registrations: Awaited<ReturnType<typeof listRegistrations>>,
+  poolCount = 0,
 ): TournamentView {
   const confirmed = registrations.filter((r) => r.status === "confirmed");
   // The pool is what confirmed rosters actually paid; subs who paid count as entries too.
@@ -80,6 +84,7 @@ export function buildTournamentView(
     prizeShares: splitPrize(poolArs, tournament.prizeSplit),
     goalShares: splitPrize(tournament.prizeGoalArs, tournament.prizeSplit),
     confirmedCount: confirmed.length,
+    poolCount,
     registrations: registrations
       .filter((r) => PUBLIC_REGISTRATION_STATUSES.includes(r.status))
       .map((r) => ({

@@ -16,6 +16,7 @@ import {
   respondToRequestFn,
   transferCaptainFn,
 } from "../server/teams/teams.functions";
+import { renameTeamFn, respondToPoolRequestFn } from "../server/pool/pool.functions";
 import { t } from "../shared/i18n";
 import { formatRank } from "../shared/rank";
 import { formatRiotId, riotIdToSlug } from "../shared/riot-id";
@@ -37,6 +38,12 @@ export const Route = createFileRoute("/equipos/$slug")({
 });
 
 type TeamPageData = Awaited<ReturnType<typeof getTeamPage>>;
+
+/** Pool join requests are accepted through the pool code, which also puts the player on the roster. */
+const respond = (request: { id: string; tournamentId: string | null }, accept: boolean) =>
+  request.tournamentId
+    ? respondToPoolRequestFn({ data: { requestId: request.id, accept } })
+    : respondToRequestFn({ data: { requestId: request.id, accept } });
 function TeamPage() {
   const { team, viewer, pendingRequests } = Route.useLoaderData();
   const isCaptain = viewer?.role === "captain";
@@ -60,6 +67,7 @@ function TeamPage() {
       <div className="px-4 py-12 sm:px-8 md:py-16">
         <div className="mx-auto flex max-w-4xl flex-col gap-14">
           <Roster team={team} isCaptain={isCaptain} />
+          {isCaptain && team.autoFormed && <KeepTeam teamId={team.id} name={team.name} tag={team.tag} />}
           {isCaptain && <Invite teamId={team.id} />}
           {isCaptain && <PendingRequests requests={pendingRequests} />}
           {viewer?.role === "member" && <LeaveAction teamId={team.id} teamName={team.name} />}
@@ -209,6 +217,34 @@ function Roster({ team, isCaptain }: { team: TeamPageData["team"]; isCaptain: bo
   );
 }
 
+function KeepTeam({ teamId, name, tag }: { teamId: string; name: string; tag: string }) {
+  const { run, error, pending } = useTeamAction();
+  const id = useId();
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    await run(() => renameTeamFn({ data: { teamId, name: String(data.get("name")), tag: String(data.get("tag")) } }));
+  }
+  return (
+    <section className="max-w-md">
+      <SectionHeading>{t("team.autoFormed.title")}</SectionHeading>
+      <p className="mt-2 text-ink-muted">{t("team.autoFormed.body")}</p>
+      <form method="post" onSubmit={onSubmit} className="mt-4 flex flex-col gap-4">
+        <Field id={`${id}-name`} label={t("team.autoFormed.name")}>
+          <Input id={`${id}-name`} name="name" required defaultValue={name} autoComplete="off" />
+        </Field>
+        <Field id={`${id}-tag`} label={t("team.autoFormed.tag")}>
+          <Input id={`${id}-tag`} name="tag" required defaultValue={tag} autoComplete="off" />
+        </Field>
+        {error && <FormAlert>{error}</FormAlert>}
+        <Button type="submit" variant="secondary" disabled={pending} className="self-start">
+          {t("team.autoFormed.submit")}
+        </Button>
+      </form>
+    </section>
+  );
+}
+
 function Invite({ teamId }: { teamId: string }) {
   const { run, error, pending } = useTeamAction();
   const id = useId();
@@ -274,7 +310,7 @@ function PendingRequests({ requests }: { requests: TeamPageData["pendingRequests
                           variant="secondary"
                           size="sm"
                           disabled={pending}
-                          onClick={() => run(() => respondToRequestFn({ data: { requestId: request.id, accept: true } }))}
+                          onClick={() => run(() => respond(request, true))}
                         >
                           {t("team.action.accept")}
                         </Button>
@@ -283,7 +319,7 @@ function PendingRequests({ requests }: { requests: TeamPageData["pendingRequests
                           size="sm"
                           className="px-0"
                           disabled={pending}
-                          onClick={() => run(() => respondToRequestFn({ data: { requestId: request.id, accept: false } }))}
+                          onClick={() => run(() => respond(request, false))}
                         >
                           {t("team.action.decline")}
                         </Button>

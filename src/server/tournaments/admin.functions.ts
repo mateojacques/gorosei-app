@@ -7,7 +7,7 @@ import { tournamentInputSchema } from "../../shared/tournament";
 
 // Server-only modules are imported inside handlers so they never reach the client bundle.
 // Anyone who isn't an admin gets the ordinary not-found page: the admin area never admits it exists.
-async function requireAdmin() {
+export async function requireAdmin() {
   const { getSessionUser } = await import("../auth");
   const user = await getSessionUser(getRequestHeaders());
   if (!user || user.role !== "admin") throw notFound();

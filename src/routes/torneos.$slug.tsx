@@ -57,9 +57,21 @@ function TournamentPage() {
             })}
           </p>
           {tournament.status === "registration_open" && (
-            <Button asChild size="lg" className="mt-8">
-              <a href={`/torneos/${tournament.slug}/inscribir`}>{t("tournament.register")}</a>
-            </Button>
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+              <Button asChild size="lg">
+                <a href={`/torneos/${tournament.slug}/inscribir`}>{t("tournament.register")}</a>
+              </Button>
+              <div className="flex flex-col items-start gap-1">
+                <Button asChild variant="secondary">
+                  <a href={`/torneos/${tournament.slug}/agentes-libres`}>{t("pool.findTeam")}</a>
+                </Button>
+                {tournament.poolCount > 0 && (
+                  <p className="font-display text-base font-extrabold uppercase tabular-nums">
+                    {t(tournament.poolCount === 1 ? "pool.count" : "pool.count_other", { count: tournament.poolCount })}
+                  </p>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </section>

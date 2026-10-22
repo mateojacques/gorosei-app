@@ -207,3 +207,64 @@ export async function listPool(db: Executor, tournamentId: string, filter: PoolF
     .filter((p) => !filter.maxRank || compareRanks(p.rank, filter.maxRank) <= 0)
     .sort((a, b) => compareRanks(b.rank, a.rank) || a.joinedAt.getTime() - b.joinedAt.getTime());
 }
+
+/** Admin removal: the entry goes inactive, the payment is untouched (an unused one becomes a credit at close). */
+export async function removeFromPool(
+  db: Db,
+  adminId: string,
+  tournamentId: string,
+  userId: string,
+  reason: string,
+): Promise<{ ok: true } | { ok: false; reason: "not_in_pool" }> {
+  return db.transaction(async (tx) => {
+    await lockTournament(tx, tournamentId);
+    const [removed] = await tx
+      .update(poolEntries)
+      .set({ active: false })
+      .where(and(eq(poolEntries.tournamentId, tournamentId), eq(poolEntries.userId, userId), eq(poolEntries.active, true)))
+      .returning({ userId: poolEntries.userId });
+    if (!removed) return { ok: false, reason: "not_in_pool" } as const;
+    await writeAudit(tx, {
+      actorUserId: adminId,
+      action: "pool.removed",
+      entityType: "tournament",
+      entityId: tournamentId,
+      data: { userId, reason },
+    });
+    return { ok: true } as const;
+  });
+}
+
+export type AdminPoolRow = {
+  userId: string;
+  riotId: string;
+  rank: Rank | null;
+  roles: Role[];
+  autoPlace: boolean;
+  paid: boolean;
+  state: "available" | "on_roster" | "left";
+};
+
+/** Every entry, paid or not, with where the player stands. */
+export async function listPoolForAdmin(db: Executor, tournamentId: string): Promise<AdminPoolRow[]> {
+  const entries = await db.select().from(poolEntries).where(eq(poolEntries.tournamentId, tournamentId)).orderBy(asc(poolEntries.joinedAt));
+  const [tournament] = await db.select({ fee: tournaments.entryFeeArs }).from(tournaments).where(eq(tournaments.id, tournamentId));
+  const paid = await paidUserIds(db, tournamentId);
+  const rostered = new Set(
+    (
+      await db
+        .select({ userId: registrationPlayers.userId })
+        .from(registrationPlayers)
+        .where(and(eq(registrationPlayers.tournamentId, tournamentId), eq(registrationPlayers.active, true)))
+    ).map((r) => r.userId),
+  );
+  return entries.map((e) => ({
+    userId: e.userId,
+    riotId: e.snapshot.riotId,
+    rank: e.snapshot.rank,
+    roles: e.roles,
+    autoPlace: e.autoPlace,
+    paid: tournament?.fee === 0 || paid.has(e.userId),
+    state: !e.active ? "left" : rostered.has(e.userId) ? "on_roster" : "available",
+  }));
+}

@@ -1,6 +1,7 @@
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import { useId, useState } from "react";
 import { Field, FormAlert } from "../components/site/form";
+import { AdminPool } from "../components/tournament/admin-pool";
 import { AdminRegistrations, PlayerPanel } from "../components/tournament/admin-registrations";
 import { TournamentStatusTag } from "../components/tournament/registration-status";
 import { TournamentForm, toFormValues } from "../components/tournament/tournament-form";
@@ -14,15 +15,17 @@ import {
   openRegistrationFn,
   updateTournamentFn,
 } from "../server/tournaments/admin.functions";
+import { getAdminPoolFn } from "../server/pool/pool.functions";
 import { t } from "../shared/i18n";
 
 export const Route = createFileRoute("/admin/torneos/$id")({
   loader: async ({ params }) => {
-    const [tournament, registrations] = await Promise.all([
+    const [tournament, registrations, pool] = await Promise.all([
       getAdminTournament({ data: { id: params.id } }),
       getAdminRegistrations({ data: { id: params.id } }),
+      getAdminPoolFn({ data: { tournamentId: params.id } }),
     ]);
-    return { tournament, registrations };
+    return { tournament, registrations, pool };
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -37,7 +40,7 @@ export const Route = createFileRoute("/admin/torneos/$id")({
 type Tournament = Awaited<ReturnType<typeof getAdminTournament>>;
 
 function AdminTournamentPage() {
-  const { tournament, registrations } = Route.useLoaderData();
+  const { tournament, registrations, pool } = Route.useLoaderData();
   return (
     <div className="flex flex-col gap-12">
       <div>
@@ -56,6 +59,7 @@ function AdminTournamentPage() {
       </div>
       <Lifecycle tournament={tournament} />
       <AdminRegistrations tournamentId={tournament.id} free={tournament.entryFeeArs === 0} registrations={registrations} />
+      <AdminPool tournamentId={tournament.id} rows={pool} />
       <PlayerPanel />
       <section className="max-w-3xl">
         <TournamentForm

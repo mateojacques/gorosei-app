@@ -3,6 +3,7 @@ import { type ReactNode, useId } from "react";
 import { FormAlert } from "../components/site/form";
 import { SectionHeading, Th, useTeamAction } from "../components/team/team-ui";
 import { Button, buttonVariants } from "../components/ui/button";
+import { respondToPoolRequestFn } from "../server/pool/pool.functions";
 import { cancelRequestFn, getMyTeams, respondToRequestFn } from "../server/teams/teams.functions";
 import { t } from "../shared/i18n";
 
@@ -12,7 +13,13 @@ export const Route = createFileRoute("/mis-equipos")({
   component: MyTeamsPage,
 });
 
-type Pending = { id: string; teamName: string; teamSlug: string };
+type Pending = { id: string; teamName: string; teamSlug: string; tournamentId: string | null };
+
+/** Pool invites are accepted through the pool code, which also places the player on the roster. */
+const respond = (request: Pending, accept: boolean) =>
+  request.tournamentId
+    ? respondToPoolRequestFn({ data: { requestId: request.id, accept } })
+    : respondToRequestFn({ data: { requestId: request.id, accept } });
 
 function MyTeamsPage() {
   const state = Route.useLoaderData();
@@ -88,6 +95,7 @@ function InvitesTable({ invites }: { invites: Pending[] }) {
             <tr key={invite.id} className="border-b border-line align-top">
               <td className="py-3 pr-3">
                 <TeamLink slug={invite.teamSlug} name={invite.teamName} />
+                {invite.tournamentId && <span className="block text-sm text-ink-muted">{t("pool.kind.invite")}</span>}
               </td>
               <td className="py-2 text-right">
                 <div className="flex flex-col items-end gap-1 sm:flex-row sm:justify-end sm:gap-3">
@@ -95,7 +103,7 @@ function InvitesTable({ invites }: { invites: Pending[] }) {
                     variant="secondary"
                     size="sm"
                     disabled={pending}
-                    onClick={() => run(() => respondToRequestFn({ data: { requestId: invite.id, accept: true } }))}
+                    onClick={() => run(() => respond(invite, true))}
                   >
                     {t("team.action.accept")}
                   </Button>
@@ -104,7 +112,7 @@ function InvitesTable({ invites }: { invites: Pending[] }) {
                     size="sm"
                     className="px-0"
                     disabled={pending}
-                    onClick={() => run(() => respondToRequestFn({ data: { requestId: invite.id, accept: false } }))}
+                    onClick={() => run(() => respond(invite, false))}
                   >
                     {t("team.action.decline")}
                   </Button>
@@ -137,6 +145,7 @@ function RequestsTable({ requests }: { requests: Pending[] }) {
             <tr key={request.id} className="border-b border-line align-top">
               <td className="py-3 pr-3">
                 <TeamLink slug={request.teamSlug} name={request.teamName} />
+                {request.tournamentId && <span className="block text-sm text-ink-muted">{t("pool.kind.join_request")}</span>}
               </td>
               <td className="py-2 text-right">
                 <Button

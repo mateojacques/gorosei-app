@@ -32,6 +32,8 @@ export type TeamView = {
   name: string;
   tag: string;
   captainUserId: string;
+  /** Formed by auto-placement and not yet kept by its captain (renamed). */
+  autoFormed: boolean;
   members: { userId: string; gameName: string; tagLine: string; role: "captain" | "member"; currentRank: Rank | null }[];
 };
 
@@ -452,7 +454,7 @@ export async function getTeamBySlug(db: Db, slug: string): Promise<TeamView | nu
       currentRank: await getCurrentRank(db, r.riotAccountId),
     })),
   );
-  return { id: team.id, slug: team.slug, name: team.name, tag: team.tag, captainUserId: team.captainUserId, members };
+  return { id: team.id, slug: team.slug, name: team.name, tag: team.tag, captainUserId: team.captainUserId, autoFormed: team.autoFormedTournamentId !== null, members };
 }
 
 export async function listTeamsForUser(

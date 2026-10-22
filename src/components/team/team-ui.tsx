@@ -1,9 +1,17 @@
 import { useRouter } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { type MessageKey, t } from "@/shared/i18n";
+import { esAR } from "@/shared/i18n/es-AR";
 
 type TeamReason = { [K in MessageKey]: K extends `team.error.${infer R}` ? R : never }[MessageKey];
-type ActionResult = { ok: true } | { ok: false; reason: TeamReason };
+type PoolReason = { [K in MessageKey]: K extends `pool.error.${infer R}` ? R : never }[MessageKey];
+type ActionResult = { ok: true } | { ok: false; reason: TeamReason | PoolReason };
+
+/** Pool requests are answered by pool code, whose reasons have their own messages. */
+function reasonMessage(reason: TeamReason | PoolReason): string {
+  const teamKey = `team.error.${reason}` as MessageKey;
+  return t(teamKey in esAR ? teamKey : (`pool.error.${reason}` as MessageKey));
+}
 
 /**
  * Runs a team action: on success the page reloads its data, on failure the reason's message is shown.
@@ -19,7 +27,7 @@ export function useTeamAction() {
     try {
       const result = await action();
       if (!result.ok) {
-        setError(t(`team.error.${result.reason}`));
+        setError(reasonMessage(result.reason));
         return false;
       }
       await router.invalidate();

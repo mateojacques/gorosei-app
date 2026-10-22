@@ -21,6 +21,7 @@ export const PUBLIC_ROUTES = [
   `/equipos/${seededTeam.slug}`,
   `/torneos/${seededTournament.slug}`,
   `/torneos/${seededTournament.slug}/equipos/${seededTeam.slug}`,
+  `/torneos/${seededTournament.slug}/agentes-libres`,
 ];
 
 export async function seedPublicRoutes(): Promise<void> {
