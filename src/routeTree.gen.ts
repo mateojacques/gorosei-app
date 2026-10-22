@@ -18,6 +18,9 @@ import { Route as ApiSplatRouteImport } from './routes/api.$'
 import { Route as EquiposSlugRouteImport } from './routes/equipos.$slug'
 import { Route as EquiposNuevoRouteImport } from './routes/equipos.nuevo'
 import { Route as JugadorRiotIdRouteImport } from './routes/jugador.$riotId'
+import { Route as TorneosSlugRouteImport } from './routes/torneos.$slug'
+import { Route as TorneosSlugInscribirRouteImport } from './routes/torneos.$slug_.inscribir'
+import { Route as TorneosSlugEquiposTeamSlugRouteImport } from './routes/torneos.$slug_.equipos.$teamSlug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -64,6 +67,22 @@ const JugadorRiotIdRoute = JugadorRiotIdRouteImport.update({
   path: '/jugador/$riotId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TorneosSlugRoute = TorneosSlugRouteImport.update({
+  id: '/torneos/$slug',
+  path: '/torneos/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TorneosSlugInscribirRoute = TorneosSlugInscribirRouteImport.update({
+  id: '/torneos/$slug_/inscribir',
+  path: '/torneos/$slug/inscribir',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TorneosSlugEquiposTeamSlugRoute =
+  TorneosSlugEquiposTeamSlugRouteImport.update({
+    id: '/torneos/$slug_/equipos/$teamSlug',
+    path: '/torneos/$slug/equipos/$teamSlug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +94,9 @@ export interface FileRoutesByFullPath {
   '/equipos/$slug': typeof EquiposSlugRoute
   '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
+  '/torneos/$slug': typeof TorneosSlugRoute
+  '/torneos/$slug/inscribir': typeof TorneosSlugInscribirRoute
+  '/torneos/$slug/equipos/$teamSlug': typeof TorneosSlugEquiposTeamSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +108,9 @@ export interface FileRoutesByTo {
   '/equipos/$slug': typeof EquiposSlugRoute
   '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
+  '/torneos/$slug': typeof TorneosSlugRoute
+  '/torneos/$slug/inscribir': typeof TorneosSlugInscribirRoute
+  '/torneos/$slug/equipos/$teamSlug': typeof TorneosSlugEquiposTeamSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +123,9 @@ export interface FileRoutesById {
   '/equipos/$slug': typeof EquiposSlugRoute
   '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
+  '/torneos/$slug': typeof TorneosSlugRoute
+  '/torneos/$slug_/inscribir': typeof TorneosSlugInscribirRoute
+  '/torneos/$slug_/equipos/$teamSlug': typeof TorneosSlugEquiposTeamSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +139,9 @@ export interface FileRouteTypes {
     | '/equipos/$slug'
     | '/equipos/nuevo'
     | '/jugador/$riotId'
+    | '/torneos/$slug'
+    | '/torneos/$slug/inscribir'
+    | '/torneos/$slug/equipos/$teamSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +153,9 @@ export interface FileRouteTypes {
     | '/equipos/$slug'
     | '/equipos/nuevo'
     | '/jugador/$riotId'
+    | '/torneos/$slug'
+    | '/torneos/$slug/inscribir'
+    | '/torneos/$slug/equipos/$teamSlug'
   id:
     | '__root__'
     | '/'
@@ -133,6 +167,9 @@ export interface FileRouteTypes {
     | '/equipos/$slug'
     | '/equipos/nuevo'
     | '/jugador/$riotId'
+    | '/torneos/$slug'
+    | '/torneos/$slug_/inscribir'
+    | '/torneos/$slug_/equipos/$teamSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +182,9 @@ export interface RootRouteChildren {
   EquiposSlugRoute: typeof EquiposSlugRoute
   EquiposNuevoRoute: typeof EquiposNuevoRoute
   JugadorRiotIdRoute: typeof JugadorRiotIdRoute
+  TorneosSlugRoute: typeof TorneosSlugRoute
+  TorneosSlugInscribirRoute: typeof TorneosSlugInscribirRoute
+  TorneosSlugEquiposTeamSlugRoute: typeof TorneosSlugEquiposTeamSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +252,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JugadorRiotIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/torneos/$slug': {
+      id: '/torneos/$slug'
+      path: '/torneos/$slug'
+      fullPath: '/torneos/$slug'
+      preLoaderRoute: typeof TorneosSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/torneos/$slug_/inscribir': {
+      id: '/torneos/$slug_/inscribir'
+      path: '/torneos/$slug/inscribir'
+      fullPath: '/torneos/$slug/inscribir'
+      preLoaderRoute: typeof TorneosSlugInscribirRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/torneos/$slug_/equipos/$teamSlug': {
+      id: '/torneos/$slug_/equipos/$teamSlug'
+      path: '/torneos/$slug/equipos/$teamSlug'
+      fullPath: '/torneos/$slug/equipos/$teamSlug'
+      preLoaderRoute: typeof TorneosSlugEquiposTeamSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -225,6 +286,9 @@ const rootRouteChildren: RootRouteChildren = {
   EquiposSlugRoute: EquiposSlugRoute,
   EquiposNuevoRoute: EquiposNuevoRoute,
   JugadorRiotIdRoute: JugadorRiotIdRoute,
+  TorneosSlugRoute: TorneosSlugRoute,
+  TorneosSlugInscribirRoute: TorneosSlugInscribirRoute,
+  TorneosSlugEquiposTeamSlugRoute: TorneosSlugEquiposTeamSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
