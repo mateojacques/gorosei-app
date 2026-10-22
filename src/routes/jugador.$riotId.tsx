@@ -7,26 +7,26 @@ import { getProfileBySlug } from "../server/identity/profile.functions";
 import { formatLongDate } from "../shared/format";
 import { t } from "../shared/i18n";
 import { formatRank } from "../shared/rank";
-import { formatRiotId } from "../shared/riot-id";
+import { formatRiotId, riotIdToSlug } from "../shared/riot-id";
+import { DEFAULT_OG_IMAGE, pageMeta } from "../shared/seo";
 
 export const Route = createFileRoute("/jugador/$riotId")({
   loader: ({ params }) => getProfileBySlug({ data: { slug: params.riotId } }),
   head: ({ loaderData }) => {
     if (!loaderData) return { meta: [{ title: `${t("profile.notFound")} · ${t("app.name")}` }] };
     const riotId = formatRiotId(loaderData);
-    return {
-      meta: [
-        { title: `${riotId} · ${t("app.name")}` },
-        {
-          name: "description",
-          content: t("profile.metaDescription", {
-            riotId,
-            rank: formatRank(loaderData.currentRank),
-            peak: formatRank(loaderData.seasonPeak),
-          }),
-        },
-      ],
-    };
+    return pageMeta({
+      origin: loaderData.origin,
+      path: `/jugador/${riotIdToSlug(loaderData)}`,
+      title: `${riotId} · ${t("app.name")}`,
+      description: t("profile.metaDescription", {
+        riotId,
+        rank: formatRank(loaderData.currentRank),
+        peak: formatRank(loaderData.seasonPeak),
+      }),
+      image: DEFAULT_OG_IMAGE,
+      type: "article",
+    });
   },
   component: ProfilePage,
   notFoundComponent: ProfileNotFound,

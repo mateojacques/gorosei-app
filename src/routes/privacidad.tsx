@@ -2,14 +2,22 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { formatLongDate } from "../shared/format";
 import { type MessageKey, t } from "../shared/i18n";
-
-const CONTACT_EMAIL = "mateojacquesweb@gmail.com";
-const LAST_UPDATED = new Date("2026-10-21T15:00:00Z");
+import { PRIVACY_CONTACT_EMAIL as CONTACT_EMAIL, PRIVACY_LAST_UPDATED as LAST_UPDATED } from "../shared/privacy";
+import { DEFAULT_OG_IMAGE, pageMeta } from "../shared/seo";
+import { getSiteOrigin } from "../server/viewer.functions";
 
 export const Route = createFileRoute("/privacidad")({
-  head: () => ({
-    meta: [{ title: t("privacy.metaTitle") }, { name: "description", content: t("privacy.metaDescription") }],
-  }),
+  loader: async () => ({ origin: await getSiteOrigin() }),
+  head: ({ loaderData }) =>
+    loaderData
+      ? pageMeta({
+          origin: loaderData.origin,
+          path: "/privacidad",
+          title: t("privacy.metaTitle"),
+          description: t("privacy.metaDescription"),
+          image: DEFAULT_OG_IMAGE,
+        })
+      : {},
   component: PrivacyPage,
 });
 

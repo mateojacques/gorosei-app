@@ -6,10 +6,11 @@ import { Button, buttonVariants } from "../components/ui/button";
 import { respondToPoolRequestFn } from "../server/pool/pool.functions";
 import { cancelRequestFn, getMyTeams, respondToRequestFn } from "../server/teams/teams.functions";
 import { t } from "../shared/i18n";
+import { NOINDEX_META } from "../shared/seo";
 
 export const Route = createFileRoute("/mis-equipos")({
   loader: () => getMyTeams(),
-  head: () => ({ meta: [{ title: `${t("team.mine.title")} · ${t("app.name")}` }] }),
+  head: () => ({ meta: [{ title: `${t("team.mine.title")} · ${t("app.name")}` }, NOINDEX_META] }),
   component: MyTeamsPage,
 });
 

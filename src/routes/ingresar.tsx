@@ -6,6 +6,7 @@ import { Field, FormAlert } from "../components/site/form";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { t } from "../shared/i18n";
+import { NOINDEX_META } from "../shared/seo";
 
 const getAuthOptions = createServerFn({ method: "GET" }).handler(async () => {
   const { isDiscordEnabled } = await import("../server/auth");
@@ -14,7 +15,7 @@ const getAuthOptions = createServerFn({ method: "GET" }).handler(async () => {
 
 export const Route = createFileRoute("/ingresar")({
   loader: () => getAuthOptions(),
-  head: () => ({ meta: [{ title: `${t("auth.title")} · ${t("app.name")}` }] }),
+  head: () => ({ meta: [{ title: `${t("auth.title")} · ${t("app.name")}` }, NOINDEX_META] }),
   component: SignInPage,
 });
 

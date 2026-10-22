@@ -10,10 +10,11 @@ import { NotFound } from "../components/site/not-found";
 import { getMatchPage } from "../server/matchday/matchday.functions";
 import { t } from "../shared/i18n";
 import { isModerator } from "../shared/match";
+import { NOINDEX_META } from "../shared/seo";
 
 export const Route = createFileRoute("/partidas/$matchId")({
   loader: ({ params }) => getMatchPage({ data: { matchId: params.matchId } }),
-  head: () => ({ meta: [{ title: `${t("matchday.live.title")} · ${t("app.name")}` }] }),
+  head: () => ({ meta: [{ title: `${t("matchday.live.title")} · ${t("app.name")}` }, NOINDEX_META] }),
   component: MatchPage,
   notFoundComponent: () => <NotFound message={t("matchday.error.not_found")} />,
 });

@@ -25,3 +25,9 @@ async function loadViewerState(): Promise<ViewerState> {
     .where(eq(riotAccounts.userId, user.id));
   return { signedIn: true, role: user.role, riotAccount: riotAccount ?? null };
 }
+
+/** The public origin for canonical URLs, Open Graph and JSON-LD. */
+export const getSiteOrigin = createServerFn({ method: "GET" }).handler(async (): Promise<string> => {
+  const { configuredSiteOrigin } = await import("./seo/origin");
+  return configuredSiteOrigin();
+});

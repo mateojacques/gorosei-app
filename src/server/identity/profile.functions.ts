@@ -9,8 +9,12 @@ export const getProfileBySlug = createServerFn({ method: "GET" })
     const riotId = slugToRiotId(data.slug);
     if (!riotId) throw notFound();
     // Server-only modules are imported inside the handler so they never reach the client bundle.
-    const [{ db }, { getPublicProfile }] = await Promise.all([import("../db/client"), import("./profile")]);
+    const [{ db }, { getPublicProfile }, { configuredSiteOrigin }] = await Promise.all([
+      import("../db/client"),
+      import("./profile"),
+      import("../seo/origin"),
+    ]);
     const profile = await getPublicProfile(db, riotId.gameName, riotId.tagLine);
     if (!profile) throw notFound();
-    return profile;
+    return { ...profile, origin: await configuredSiteOrigin() };
   });

@@ -15,6 +15,8 @@ import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as MisEquiposRouteImport } from './routes/mis-equipos'
 import { Route as ModRouteImport } from './routes/mod'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as VincularRiotRouteImport } from './routes/vincular-riot'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
 import { Route as EquiposSlugRouteImport } from './routes/equipos.$slug'
@@ -59,6 +61,16 @@ const ModRoute = ModRouteImport.update({
 const PrivacidadRoute = PrivacidadRouteImport.update({
   id: '/privacidad',
   path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VincularRiotRoute = VincularRiotRouteImport.update({
@@ -146,6 +158,8 @@ export interface FileRoutesByFullPath {
   '/mis-equipos': typeof MisEquiposRoute
   '/mod': typeof ModRoute
   '/privacidad': typeof PrivacidadRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
   '/equipos/$slug': typeof EquiposSlugRoute
@@ -169,6 +183,8 @@ export interface FileRoutesByTo {
   '/mis-equipos': typeof MisEquiposRoute
   '/mod': typeof ModRoute
   '/privacidad': typeof PrivacidadRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
   '/equipos/$slug': typeof EquiposSlugRoute
@@ -193,6 +209,8 @@ export interface FileRoutesById {
   '/mis-equipos': typeof MisEquiposRoute
   '/mod': typeof ModRoute
   '/privacidad': typeof PrivacidadRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vincular-riot': typeof VincularRiotRoute
   '/api/$': typeof ApiSplatRoute
   '/equipos/$slug': typeof EquiposSlugRoute
@@ -218,6 +236,8 @@ export interface FileRouteTypes {
     | '/mis-equipos'
     | '/mod'
     | '/privacidad'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/vincular-riot'
     | '/api/$'
     | '/equipos/$slug'
@@ -241,6 +261,8 @@ export interface FileRouteTypes {
     | '/mis-equipos'
     | '/mod'
     | '/privacidad'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/vincular-riot'
     | '/api/$'
     | '/equipos/$slug'
@@ -264,6 +286,8 @@ export interface FileRouteTypes {
     | '/mis-equipos'
     | '/mod'
     | '/privacidad'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/vincular-riot'
     | '/api/$'
     | '/equipos/$slug'
@@ -288,6 +312,8 @@ export interface RootRouteChildren {
   MisEquiposRoute: typeof MisEquiposRoute
   ModRoute: typeof ModRoute
   PrivacidadRoute: typeof PrivacidadRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VincularRiotRoute: typeof VincularRiotRoute
   ApiSplatRoute: typeof ApiSplatRoute
   EquiposSlugRoute: typeof EquiposSlugRoute
@@ -344,6 +370,20 @@ declare module '@tanstack/react-router' {
       path: '/privacidad'
       fullPath: '/privacidad'
       preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/vincular-riot': {
@@ -475,6 +515,8 @@ const rootRouteChildren: RootRouteChildren = {
   MisEquiposRoute: MisEquiposRoute,
   ModRoute: ModRoute,
   PrivacidadRoute: PrivacidadRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   VincularRiotRoute: VincularRiotRoute,
   ApiSplatRoute: ApiSplatRoute,
   EquiposSlugRoute: EquiposSlugRoute,

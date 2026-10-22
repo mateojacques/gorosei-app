@@ -111,3 +111,8 @@ export function robotsTxt(origin: string): string {
     "",
   ].join("\n");
 }
+
+export const DEFAULT_OG_IMAGE = "/og/default.png";
+
+/** For pages that must stay out of search results: personal, transactional or low-value. */
+export const NOINDEX_META = { name: "robots", content: "noindex,follow" };

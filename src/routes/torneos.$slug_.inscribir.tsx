@@ -6,6 +6,7 @@ import { RosterPicker } from "../components/tournament/roster-picker";
 import { Button } from "../components/ui/button";
 import { getRegisterPage, registerTeamFn } from "../server/tournaments/tournaments.functions";
 import { t } from "../shared/i18n";
+import { NOINDEX_META } from "../shared/seo";
 
 export const Route = createFileRoute("/torneos/$slug_/inscribir")({
   loader: ({ params }) => getRegisterPage({ data: { slug: params.slug } }),
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/torneos/$slug_/inscribir")({
           ? `${t("registration.register.title")} · ${loaderData.tournament.title} #${loaderData.tournament.edition}`
           : t("tournament.notFound"),
       },
+      NOINDEX_META,
     ],
   }),
   component: RegisterPage,

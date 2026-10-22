@@ -5,9 +5,10 @@ import { Button, buttonVariants } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { createTeamFn } from "../server/teams/teams.functions";
 import { t } from "../shared/i18n";
+import { NOINDEX_META } from "../shared/seo";
 
 export const Route = createFileRoute("/equipos/nuevo")({
-  head: () => ({ meta: [{ title: `${t("team.create.title")} · ${t("app.name")}` }] }),
+  head: () => ({ meta: [{ title: `${t("team.create.title")} · ${t("app.name")}` }, NOINDEX_META] }),
   component: CreateTeamPage,
 });
 

@@ -37,7 +37,8 @@ export const getTournamentPage = createServerFn({ method: "GET" })
     const { db, view } = await deps();
     const tournament = await view.getTournamentView(db, data.slug);
     if (!tournament) throw notFound();
-    return tournament;
+    const { configuredSiteOrigin } = await import("../seo/origin");
+    return { ...tournament, origin: await configuredSiteOrigin() };
   });
 
 export const getRegisterPage = createServerFn({ method: "GET" })

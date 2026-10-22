@@ -13,6 +13,7 @@ import { getCheckInPanel } from "../server/matchday/matchday.functions";
 import { getTournamentPage } from "../server/tournaments/tournaments.functions";
 import { formatArs } from "../shared/format";
 import { t } from "../shared/i18n";
+import { absoluteUrl, eventJsonLd, jsonLdString, pageMeta } from "../shared/seo";
 import { ROSTER_STARTERS } from "../shared/tournament";
 
 export const Route = createFileRoute("/torneos/$slug")({
@@ -25,12 +26,24 @@ export const Route = createFileRoute("/torneos/$slug")({
   },
   head: ({ loaderData }) => {
     if (!loaderData) return { meta: [{ title: `${t("tournament.notFound")} · ${t("app.name")}` }] };
-    const { title, edition } = loaderData;
+    const { title, edition, origin, slug } = loaderData;
+    const image = `/og/torneos/${slug}.png`;
+    const description = t("tournament.metaDescription", { title, edition });
+    const event = eventJsonLd({
+      origin,
+      slug,
+      title,
+      edition,
+      startsAt: new Date(loaderData.startsAt),
+      status: loaderData.status,
+      entryFeeArs: loaderData.entryFeeArs,
+      prizeGoalArs: loaderData.prizeGoalArs,
+      description,
+      imageUrl: absoluteUrl(origin, image),
+    });
     return {
-      meta: [
-        { title: `${title} #${edition} · ${t("app.name")}` },
-        { name: "description", content: t("tournament.metaDescription", { title, edition }) },
-      ],
+      ...pageMeta({ origin, path: `/torneos/${slug}`, title: `${title} #${edition} · ${t("app.name")}`, description, image }),
+      scripts: [{ type: "application/ld+json", children: jsonLdString(event) }],
     };
   },
   component: TournamentPage,

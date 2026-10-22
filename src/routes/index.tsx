@@ -4,31 +4,37 @@ import { CupFacts } from "../components/cup/cup-facts";
 import { Prize } from "../components/cup/prize";
 import { Stage } from "../components/cup/stage";
 import { getLandingTournament } from "../server/tournaments/tournaments.functions";
+import { getSiteOrigin } from "../server/viewer.functions";
 import { formatArs, formatCupDay, formatCupTime } from "../shared/format";
 import { t } from "../shared/i18n";
 import { splitPrize } from "../shared/prize";
+import { DEFAULT_OG_IMAGE, pageMeta } from "../shared/seo";
 
 export const Route = createFileRoute("/")({
-  loader: () => getLandingTournament(),
-  head: ({ loaderData: tournament }) => {
+  loader: async () => {
+    const [tournament, origin] = await Promise.all([getLandingTournament(), getSiteOrigin()]);
+    return { tournament, origin };
+  },
+  head: ({ loaderData }) => {
+    if (!loaderData) return {};
+    const { tournament, origin } = loaderData;
     if (!tournament) {
-      return { meta: [{ title: t("cup.metaTitleNone") }, { name: "description", content: t("cup.metaDescriptionNone") }] };
+      return pageMeta({ origin, path: "/", title: t("cup.metaTitleNone"), description: t("cup.metaDescriptionNone"), image: DEFAULT_OG_IMAGE });
     }
     const startsAt = new Date(tournament.startsAt);
-    return {
-      meta: [
-        { title: t("cup.metaTitle", { title: tournament.title, edition: tournament.edition }) },
-        {
-          name: "description",
-          content: t("cup.metaDescription", {
-            title: tournament.title,
-            prize: formatArs(championGoal(tournament)),
-            day: formatCupDay(startsAt),
-            time: formatCupTime(startsAt),
-          }),
-        },
-      ],
-    };
+    return pageMeta({
+      origin,
+      path: "/",
+      title: t("cup.metaTitle", { title: tournament.title, edition: tournament.edition }),
+      description: t("cup.metaDescription", {
+        title: tournament.title,
+        prize: formatArs(championGoal(tournament)),
+        day: formatCupDay(startsAt),
+        time: formatCupTime(startsAt),
+      }),
+      // The landing promotes the featured cup, so a shared link shows that cup's card.
+      image: `/og/torneos/${tournament.slug}.png`,
+    });
   },
   component: CupLanding,
 });
@@ -39,7 +45,7 @@ const championGoal = (tournament: { prizeGoalArs: number; prizeSplit: number[] }
 
 function CupLanding() {
   const viewer = useLoaderData({ from: "__root__" });
-  const tournament = Route.useLoaderData();
+  const { tournament } = Route.useLoaderData();
   return (
     <main>
       <Stage tournament={tournament} />

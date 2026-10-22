@@ -20,6 +20,7 @@ import {
 import { renameTeamFn, respondToPoolRequestFn } from "../server/pool/pool.functions";
 import { formatLongDate } from "../shared/format";
 import { t } from "../shared/i18n";
+import { DEFAULT_OG_IMAGE, pageMeta } from "../shared/seo";
 import { formatRank } from "../shared/rank";
 import { formatRiotId, riotIdToSlug } from "../shared/riot-id";
 
@@ -27,13 +28,14 @@ export const Route = createFileRoute("/equipos/$slug")({
   loader: ({ params }) => getTeamPage({ data: { slug: params.slug } }),
   head: ({ loaderData }) => {
     if (!loaderData) return { meta: [{ title: `${t("team.error.team_not_found")} · ${t("app.name")}` }] };
-    const { name, tag } = loaderData.team;
-    return {
-      meta: [
-        { title: `${name} ${t("team.tag", { tag })} · ${t("app.name")}` },
-        { name: "description", content: t("team.metaDescription", { team: name, tag }) },
-      ],
-    };
+    const { name, tag, slug } = loaderData.team;
+    return pageMeta({
+      origin: loaderData.origin,
+      path: `/equipos/${slug}`,
+      title: `${name} ${t("team.tag", { tag })} · ${t("app.name")}`,
+      description: t("team.metaDescription", { team: name, tag }),
+      image: DEFAULT_OG_IMAGE,
+    });
   },
   component: TeamPage,
   notFoundComponent: () => <NotFound message={t("team.error.team_not_found")} />,

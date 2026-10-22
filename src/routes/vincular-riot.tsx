@@ -11,10 +11,11 @@ import { Button, buttonVariants } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { type MessageKey, t } from "../shared/i18n";
 import { formatRiotId } from "../shared/riot-id";
+import { NOINDEX_META } from "../shared/seo";
 
 export const Route = createFileRoute("/vincular-riot")({
   loader: () => getRiotLinkState(),
-  head: () => ({ meta: [{ title: `${t("riotLink.title")} · ${t("app.name")}` }] }),
+  head: () => ({ meta: [{ title: `${t("riotLink.title")} · ${t("app.name")}` }, NOINDEX_META] }),
   component: LinkRiotPage,
 });
 

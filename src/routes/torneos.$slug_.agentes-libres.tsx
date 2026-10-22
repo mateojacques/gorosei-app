@@ -25,6 +25,7 @@ import { formatFailure } from "../shared/eligibility";
 import { t } from "../shared/i18n";
 import { ROLES, type Role } from "../shared/pool";
 import { TIERS } from "../shared/rank";
+import { NOINDEX_META } from "../shared/seo";
 
 // The GET filter form sends empty values for "any"; those read as no filter.
 const searchSchema = z.object({
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/torneos/$slug_/agentes-libres")({
           ? `${t("pool.title")} · ${loaderData.tournament.title} #${loaderData.tournament.edition}`
           : t("tournament.notFound"),
       },
+      NOINDEX_META,
       ...(loaderData
         ? [{ name: "description", content: t("pool.metaDescription", { title: loaderData.tournament.title, edition: loaderData.tournament.edition }) }]
         : []),
