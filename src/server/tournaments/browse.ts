@@ -1,6 +1,6 @@
 import { and, count, desc, eq, inArray, notInArray } from "drizzle-orm";
-import { FINISHED_LIMIT, rankBracketOf } from "../../shared/browse";
-import type { BrowseTournament } from "../../shared/browse";
+import { FINISHED_LIMIT, filterTournaments, groupForBrowse, rankBracketOf } from "../../shared/browse";
+import type { BrowseSearch, BrowseTournament } from "../../shared/browse";
 import type { Db } from "../db/client";
 import { registrations, tournaments } from "../db/schema";
 
@@ -43,4 +43,19 @@ export async function listBrowseTournaments(db: Db): Promise<BrowseTournament[]>
     confirmedCount: confirmed.get(id) ?? 0,
     rankBracket: rankBracketOf(eligibilityRules),
   }));
+}
+
+export type BrowsePage = {
+  filters: BrowseSearch;
+  upcoming: BrowseTournament[];
+  live: BrowseTournament[];
+  finished: BrowseTournament[];
+  /** Whether any public tournament exists at all, before filters: tells "nothing matches" from "nothing yet". */
+  hasAny: boolean;
+};
+
+export async function loadBrowsePage(db: Db, filters: BrowseSearch, now: Date): Promise<BrowsePage> {
+  const all = await listBrowseTournaments(db);
+  const groups = groupForBrowse(filterTournaments(all, filters, now), now);
+  return { filters, ...groups, hasAny: all.length > 0 };
 }

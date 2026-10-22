@@ -24,6 +24,7 @@ import { Route as EquiposNuevoRouteImport } from './routes/equipos.nuevo'
 import { Route as JugadorRiotIdRouteImport } from './routes/jugador.$riotId'
 import { Route as OgDefaultDotpngRouteImport } from './routes/og.default[.]png'
 import { Route as PartidasMatchIdRouteImport } from './routes/partidas.$matchId'
+import { Route as TorneosIndexRouteImport } from './routes/torneos.index'
 import { Route as TorneosSlugRouteImport } from './routes/torneos.$slug'
 import { Route as AdminTorneosIndexRouteImport } from './routes/admin.torneos.index'
 import { Route as AdminTorneosIdRouteImport } from './routes/admin.torneos.$id'
@@ -108,6 +109,11 @@ const PartidasMatchIdRoute = PartidasMatchIdRouteImport.update({
   path: '/partidas/$matchId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TorneosIndexRoute = TorneosIndexRouteImport.update({
+  id: '/torneos/',
+  path: '/torneos/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TorneosSlugRoute = TorneosSlugRouteImport.update({
   id: '/torneos/$slug',
   path: '/torneos/$slug',
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/og/default.png': typeof OgDefaultDotpngRoute
   '/partidas/$matchId': typeof PartidasMatchIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
+  '/torneos/': typeof TorneosIndexRoute
   '/admin/torneos/$id': typeof AdminTorneosIdRoute
   '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
   '/og/torneos/$slug': typeof OgTorneosSlugRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/og/default.png': typeof OgDefaultDotpngRoute
   '/partidas/$matchId': typeof PartidasMatchIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
+  '/torneos': typeof TorneosIndexRoute
   '/admin/torneos/$id': typeof AdminTorneosIdRoute
   '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
   '/og/torneos/$slug': typeof OgTorneosSlugRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/og/default.png': typeof OgDefaultDotpngRoute
   '/partidas/$matchId': typeof PartidasMatchIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
+  '/torneos/': typeof TorneosIndexRoute
   '/admin/torneos/$id': typeof AdminTorneosIdRoute
   '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
   '/og/torneos/$slug': typeof OgTorneosSlugRoute
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/og/default.png'
     | '/partidas/$matchId'
     | '/torneos/$slug'
+    | '/torneos/'
     | '/admin/torneos/$id'
     | '/admin/torneos/nuevo'
     | '/og/torneos/$slug'
@@ -271,6 +281,7 @@ export interface FileRouteTypes {
     | '/og/default.png'
     | '/partidas/$matchId'
     | '/torneos/$slug'
+    | '/torneos'
     | '/admin/torneos/$id'
     | '/admin/torneos/nuevo'
     | '/og/torneos/$slug'
@@ -296,6 +307,7 @@ export interface FileRouteTypes {
     | '/og/default.png'
     | '/partidas/$matchId'
     | '/torneos/$slug'
+    | '/torneos/'
     | '/admin/torneos/$id'
     | '/admin/torneos/nuevo'
     | '/og/torneos/$slug'
@@ -322,6 +334,7 @@ export interface RootRouteChildren {
   OgDefaultDotpngRoute: typeof OgDefaultDotpngRoute
   PartidasMatchIdRoute: typeof PartidasMatchIdRoute
   TorneosSlugRoute: typeof TorneosSlugRoute
+  TorneosIndexRoute: typeof TorneosIndexRoute
   OgTorneosSlugRoute: typeof OgTorneosSlugRoute
   TorneosSlugAgentesLibresRoute: typeof TorneosSlugAgentesLibresRoute
   TorneosSlugInscribirRoute: typeof TorneosSlugInscribirRoute
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PartidasMatchIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/torneos/': {
+      id: '/torneos/'
+      path: '/torneos'
+      fullPath: '/torneos/'
+      preLoaderRoute: typeof TorneosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/torneos/$slug': {
       id: '/torneos/$slug'
       path: '/torneos/$slug'
@@ -525,6 +545,7 @@ const rootRouteChildren: RootRouteChildren = {
   OgDefaultDotpngRoute: OgDefaultDotpngRoute,
   PartidasMatchIdRoute: PartidasMatchIdRoute,
   TorneosSlugRoute: TorneosSlugRoute,
+  TorneosIndexRoute: TorneosIndexRoute,
   OgTorneosSlugRoute: OgTorneosSlugRoute,
   TorneosSlugAgentesLibresRoute: TorneosSlugAgentesLibresRoute,
   TorneosSlugInscribirRoute: TorneosSlugInscribirRoute,

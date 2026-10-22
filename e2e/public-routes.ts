@@ -16,6 +16,7 @@ export const PUBLIC_ROUTES = [
   "/ingresar",
   "/vincular-riot",
   "/privacidad",
+  "/torneos",
   `/jugador/${riotIdToSlug(seededRiotId)}`,
   `/jugador/${riotIdToSlug({ gameName: "Nadie", tagLine: "LAS" })}`,
   `/equipos/${seededTeam.slug}`,

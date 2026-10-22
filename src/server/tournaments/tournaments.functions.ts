@@ -2,6 +2,7 @@ import { notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
+import { browseSearchSchema } from "../../shared/browse";
 import { formatRiotId } from "../../shared/riot-id";
 
 // Server-only modules are imported inside handlers so they never reach the client bundle.
@@ -130,3 +131,16 @@ export const getLandingTournament = createServerFn({ method: "GET" }).handler(as
   const featured = await getFeaturedTournament(db);
   return featured ? view.getTournamentView(db, featured.slug) : null;
 });
+
+/** The browse page: filtering and grouping happen here so the page reads the same without JavaScript. */
+export const getBrowsePage = createServerFn({ method: "GET" })
+  .validator(browseSearchSchema)
+  .handler(async ({ data }) => {
+    const [{ db }, { loadBrowsePage }, { configuredSiteOrigin }] = await Promise.all([
+      import("../db/client"),
+      import("./browse"),
+      import("../seo/origin"),
+    ]);
+    const [page, origin] = await Promise.all([loadBrowsePage(db, data, new Date()), configuredSiteOrigin()]);
+    return { ...page, origin };
+  });

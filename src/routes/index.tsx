@@ -1,4 +1,4 @@
-import { createFileRoute, useLoaderData } from "@tanstack/react-router";
+import { Link, createFileRoute, useLoaderData } from "@tanstack/react-router";
 import { CupCta } from "../components/cup/cup-cta";
 import { CupFacts } from "../components/cup/cup-facts";
 import { Prize } from "../components/cup/prize";
@@ -43,6 +43,14 @@ export const Route = createFileRoute("/")({
 const championGoal = (tournament: { prizeGoalArs: number; prizeSplit: number[] }) =>
   splitPrize(tournament.prizeGoalArs, tournament.prizeSplit)[0] ?? 0;
 
+function SeeAll() {
+  return (
+    <Link to="/torneos" className="mt-6 inline-block font-semibold text-cobalt-light underline underline-offset-4 hover:text-ink">
+      {t("browse.seeAll")}
+    </Link>
+  );
+}
+
 function CupLanding() {
   const viewer = useLoaderData({ from: "__root__" });
   const { tournament } = Route.useLoaderData();
@@ -56,11 +64,13 @@ function CupLanding() {
             <div className="flex flex-col gap-10">
               <CupFacts tournament={tournament} />
               <CupCta viewer={viewer} tournament={tournament} />
+              <SeeAll />
             </div>
           </div>
         ) : (
           <div className="mx-auto max-w-6xl">
             <CupCta viewer={viewer} tournament={null} />
+            <SeeAll />
           </div>
         )}
       </section>
