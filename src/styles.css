@@ -128,3 +128,10 @@
     opacity: 0.35;
   }
 }
+
+/* Bracket rounds scroll inside their own region, never the page. */
+.bracket-scroll {
+  overscroll-behavior-x: contain;
+  scrollbar-color: var(--color-line) transparent;
+  scrollbar-width: thin;
+}
