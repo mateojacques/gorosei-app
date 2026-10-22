@@ -115,3 +115,15 @@ test("a cross-site origin cannot open a connection, while the site's own origin 
   expect(await upgradeStatus(server.port, "https://gorosei.example")).toBe(101);
   expect(await upgradeStatus(server.port)).toBe(101);
 });
+
+test("user:<id> is subscribable only by that signed-in user", async () => {
+  const { testDb } = await import("../../helpers/db");
+  const { canSubscribe } = await import("../../../src/server/realtime/server");
+  const can = canSubscribe(testDb);
+  const player: SessionUser = { id: "p1", name: "p1", role: "player" };
+  expect(await can(player, "user:p1")).toBe(true);
+  expect(await can(null, "user:p1")).toBe(false);
+  expect(await can(player, "user:p2")).toBe(false);
+  expect(await can(mod, "user:p1")).toBe(false);
+  expect(await can(player, "user:")).toBe(false);
+});

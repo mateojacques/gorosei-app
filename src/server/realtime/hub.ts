@@ -7,6 +7,7 @@ type Listener = (event: RealtimeEvent) => void;
  *   match:<id>       public state of one match, never lobby or report details
  *   chat:<matchId>   the two teams and moderators
  *   console          moderators
+ *   user:<id>        that signed-in user: "a notification arrived", no content
  */
 const state = globalThis as typeof globalThis & { __gorosei_hub?: Map<string, Set<Listener>> };
 // One instance on globalThis so dev reloads share it.

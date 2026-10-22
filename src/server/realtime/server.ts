@@ -101,11 +101,15 @@ export function startRealtimeServer(opts: {
   };
 }
 
-/** Public channels are open to everyone; chat to the two teams and moderators; the console to moderators. */
+/**
+ * Public channels are open to everyone; chat to the two teams and moderators; the console to moderators;
+ * `user:<id>` to that user only.
+ */
 export function canSubscribe(db: Db): ChannelAccess {
   return async (user, channel) => {
     const [kind, id] = channel.split(":", 2) as [string, string | undefined];
     if (kind === "tournament" || kind === "match") return !!id;
+    if (kind === "user") return !!id && !!user && user.id === id;
     if (channel === "console") return !!user && isModerator(user.role);
     if (kind === "chat" && id) return !!user && canAccessMatchChat(db, user, id);
     return false;
