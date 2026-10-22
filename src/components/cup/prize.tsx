@@ -1,8 +1,7 @@
 import type { CSSProperties } from "react";
 import { formatArs } from "@/shared/format";
-import { t } from "@/shared/i18n";
 
-export function Prize({ amountArs }: { amountArs: number }) {
+export function Prize({ amountArs, caption }: { amountArs: number; caption: string }) {
   const amount = formatArs(amountArs);
   return (
     <div className="@container">
@@ -13,7 +12,7 @@ export function Prize({ amountArs }: { amountArs: number }) {
       >
         {amount}
       </p>
-      <p className="mt-3 text-lg font-semibold text-ink">{t("cup.prizeCaption")}</p>
+      <p className="mt-3 text-lg font-semibold text-ink">{caption}</p>
     </div>
   );
 }

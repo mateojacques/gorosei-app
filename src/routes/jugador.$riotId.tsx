@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { CaptionBar } from "../components/cup/caption-bar";
 import { NotFound } from "../components/site/not-found";
 import { getProfileBySlug } from "../server/identity/profile.functions";
+import { formatLongDate } from "../shared/format";
 import { t } from "../shared/i18n";
 import { formatRank } from "../shared/rank";
 import { formatRiotId } from "../shared/riot-id";
@@ -51,8 +53,32 @@ function ProfilePage() {
             <RankStat label={t("profile.seasonPeak")} value={formatRank(profile.seasonPeak)} />
           </dl>
 
-          <QuietSection title={t("profile.teams")} body={t("profile.noTeams")} />
-          <QuietSection title={t("profile.tournaments")} body={t("profile.noTournaments")} />
+          <ProfileList title={t("profile.teams")} empty={t("profile.noTeams")}>
+            {profile.teams.map((team) => (
+              <li key={team.slug} className="border-t border-line py-3">
+                <a href={`/equipos/${team.slug}`} className="font-semibold underline-offset-4 hover:text-cobalt-light hover:underline">
+                  {team.name}
+                </a>{" "}
+                <span className="text-ink-muted">{t("team.tag", { tag: team.tag })}</span>
+              </li>
+            ))}
+          </ProfileList>
+          <ProfileList title={t("profile.tournaments")} empty={t("profile.noTournaments")}>
+            {profile.tournaments.map((tournament) => (
+              <li key={tournament.slug} className="flex flex-wrap justify-between gap-x-4 border-t border-line py-3">
+                <span>
+                  <a
+                    href={`/torneos/${tournament.slug}`}
+                    className="font-semibold underline-offset-4 hover:text-cobalt-light hover:underline"
+                  >
+                    {tournament.title} #{tournament.edition}
+                  </a>{" "}
+                  <span className="text-ink-muted">· {tournament.teamName}</span>
+                </span>
+                <span className="text-ink-muted">{formatLongDate(new Date(tournament.startsAt))}</span>
+              </li>
+            ))}
+          </ProfileList>
         </div>
       </div>
     </main>
@@ -70,11 +96,15 @@ function RankStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function QuietSection({ title, body }: { title: string; body: string }) {
+function ProfileList({ title, empty, children }: { title: string; empty: string; children: ReactNode[] }) {
   return (
     <section className="mt-12">
       <h2 className="font-display text-2xl font-extrabold uppercase">{title}</h2>
-      <p className="mt-2 text-ink-muted">{body}</p>
+      {children.length === 0 ? (
+        <p className="mt-2 text-ink-muted">{empty}</p>
+      ) : (
+        <ul className="mt-3 border-b border-line">{children}</ul>
+      )}
     </section>
   );
 }

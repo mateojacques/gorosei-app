@@ -1,7 +1,7 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { Rank } from "../../shared/rank";
 import type { Db } from "../db/client";
-import { riotAccounts } from "../db/schema";
+import { registrationPlayers, registrations, riotAccounts, teamMembers, teams, tournaments } from "../db/schema";
 import { getCurrentRank, getSeasonPeak } from "./ranks";
 
 export type PublicProfile = {
@@ -11,9 +11,9 @@ export type PublicProfile = {
   summonerLevel: number;
   currentRank: Rank | null;
   seasonPeak: Rank | null;
-  // Filled in by Plan 3 (teams and tournaments).
-  teams: [];
-  tournaments: [];
+  teams: { name: string; tag: string; slug: string }[];
+  /** Confirmed registrations, newest tournament first. */
+  tournaments: { title: string; edition: number; slug: string; startsAt: Date; teamName: string }[];
 };
 
 export async function getPublicProfile(db: Db, gameName: string, tagLine: string): Promise<PublicProfile | null> {
@@ -28,7 +28,36 @@ export async function getPublicProfile(db: Db, gameName: string, tagLine: string
     );
   if (!account) return null;
 
-  const [currentRank, seasonPeak] = await Promise.all([getCurrentRank(db, account.id), getSeasonPeak(db, account.id)]);
+  const [currentRank, seasonPeak, playerTeams, playedTournaments] = await Promise.all([
+    getCurrentRank(db, account.id),
+    getSeasonPeak(db, account.id),
+    db
+      .select({ name: teams.name, tag: teams.tag, slug: teams.slug })
+      .from(teamMembers)
+      .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+      .where(eq(teamMembers.userId, account.userId))
+      .orderBy(teams.name),
+    db
+      .select({
+        title: tournaments.title,
+        edition: tournaments.edition,
+        slug: tournaments.slug,
+        startsAt: tournaments.startsAt,
+        teamName: teams.name,
+      })
+      .from(registrationPlayers)
+      .innerJoin(registrations, eq(registrations.id, registrationPlayers.registrationId))
+      .innerJoin(tournaments, eq(tournaments.id, registrations.tournamentId))
+      .innerJoin(teams, eq(teams.id, registrations.teamId))
+      .where(
+        and(
+          eq(registrationPlayers.userId, account.userId),
+          eq(registrationPlayers.active, true),
+          eq(registrations.status, "confirmed"),
+        ),
+      )
+      .orderBy(desc(tournaments.startsAt)),
+  ]);
   return {
     gameName: account.gameName,
     tagLine: account.tagLine,
@@ -36,7 +65,7 @@ export async function getPublicProfile(db: Db, gameName: string, tagLine: string
     summonerLevel: account.summonerLevel,
     currentRank,
     seasonPeak,
-    teams: [],
-    tournaments: [],
+    teams: playerTeams,
+    tournaments: playedTournaments,
   };
 }

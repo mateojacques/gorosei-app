@@ -43,3 +43,23 @@ test("an unranked player has null ranks", async () => {
 test("an unknown player is null", async () => {
   expect(await getPublicProfile(testDb, "Nadie", "LAS")).toBeNull();
 });
+
+test("lists the player's teams and confirmed tournament registrations", async () => {
+  const { createTestRegistration, createTestTeam, createTestTournament, linkedPlayer } = await import("../../helpers/competition");
+  const { registrations } = await import("../../../src/server/db/schema");
+  const mates = await Promise.all(["m1", "m2", "m3", "m4"].map((id) => linkedPlayer(id)));
+  const team = await createTestTeam("u1", mates, "Los Pibes");
+  const tournament = await createTestTournament({ title: "Copa Semanal LAS", edition: 3, status: "registration_open", entryFeeArs: 0 });
+  await createTestRegistration(tournament.id, team.id, { starters: ["u1", ...mates], subs: [] });
+  // A second, unconfirmed registration elsewhere is not a tournament the player has played.
+  const other = await createTestTournament({ title: "Copa Otra", status: "registration_open" });
+  await createTestRegistration(other.id, team.id, { starters: ["u1"], subs: [] });
+  expect((await testDb.select().from(registrations)).map((r) => r.status).sort()).toEqual(["confirmed", "pending"]);
+
+  const profile = await getPublicProfile(testDb, "Señor Café", "LAS");
+
+  expect(profile?.teams).toEqual([{ name: "Los Pibes", tag: expect.any(String), slug: team.slug }]);
+  expect(profile?.tournaments).toEqual([
+    { title: "Copa Semanal LAS", edition: 3, slug: tournament.slug, startsAt: tournament.startsAt, teamName: "Los Pibes" },
+  ]);
+});

@@ -118,3 +118,14 @@ export const withdrawRegistrationFn = createServerFn({ method: "POST" })
     const { db, registrations } = await deps();
     return registrations.withdrawRegistration(db, user.id, data.registrationId);
   });
+
+/** The tournament the landing page features, or null when none is on. */
+export const getLandingTournament = createServerFn({ method: "GET" }).handler(async () => {
+  const [{ db }, { getFeaturedTournament }, view] = await Promise.all([
+    import("../db/client"),
+    import("./tournaments"),
+    import("./tournament-view"),
+  ]);
+  const featured = await getFeaturedTournament(db);
+  return featured ? view.getTournamentView(db, featured.slug) : null;
+});

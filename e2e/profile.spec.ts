@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { rankSnapshots } from "../src/server/db/schema";
 import { riotIdToSlug } from "../src/shared/riot-id";
+import { createTestTeam } from "../tests/helpers/competition";
 import { createTestRiotAccount, resetTestDb, testDb } from "../tests/helpers/db";
 
 const riotId = { gameName: "Señor Café", tagLine: "LAS" };
@@ -17,6 +18,7 @@ test.beforeAll(async () => {
     losses: 10,
     observedAt: new Date(),
   });
+  await createTestTeam("e2e-user", [], "Los Pibes");
 });
 
 test("profile is server-rendered with title, description and rank", async ({ request }) => {
@@ -31,6 +33,11 @@ test("profile is server-rendered with title, description and rank", async ({ req
   expect(html).toMatch(/<h1[^>]*>Señor Café#LAS<\/h1>/);
   expect(html).toMatch(/<dt[^>]*>Rango actual<\/dt><dd[^>]*>Diamante I<\/dd>/);
   expect(html).toMatch(/<dt[^>]*>Pico de temporada<\/dt><dd[^>]*>Diamante I<\/dd>/);
+});
+
+test("the profile links to the player's teams", async ({ request }) => {
+  const html = await (await request.get(`/jugador/${riotIdToSlug(riotId)}`)).text();
+  expect(html).toMatch(/<a [^>]*href="\/equipos\/los-pibes"[^>]*>Los Pibes/);
 });
 
 test("unknown players get a friendly 404", async ({ request }) => {

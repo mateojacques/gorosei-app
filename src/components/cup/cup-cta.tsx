@@ -2,10 +2,11 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import type { ViewerState } from "@/server/viewer.functions";
 import { t } from "@/shared/i18n";
 import { getLandingCta } from "@/shared/landing-cta";
+import type { TournamentStatus } from "@/shared/tournament";
 
-export function CupCta({ viewer }: { viewer: ViewerState }) {
-  const cta = getLandingCta(viewer);
-  // Linked players have nothing to do yet: a confirmation, not a red call to action.
+export function CupCta({ viewer, tournament }: { viewer: ViewerState; tournament: { slug: string; status: TournamentStatus } | null }) {
+  const cta = getLandingCta(viewer, tournament);
+  // With no copa on, linked players have nothing to do yet: a confirmation, not a red call to action.
   if (cta.labelKey === "cup.cta.ready") {
     return (
       <div className="flex flex-col items-start gap-3">

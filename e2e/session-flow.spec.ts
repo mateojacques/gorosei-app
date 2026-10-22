@@ -1,8 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { resetTestDb } from "../tests/helpers/db";
+import { seedLandingTournament } from "./helpers/tournaments";
 
 test.use({ javaScriptEnabled: true });
-test.beforeAll(resetTestDb);
+test.beforeAll(async () => {
+  await resetTestDb();
+  await seedLandingTournament();
+});
 
 test("signing up through the form updates the header and the landing CTA without a reload", async ({ page }) => {
   await page.goto("/ingresar");

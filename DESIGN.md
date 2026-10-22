@@ -130,6 +130,8 @@ A TV lower-third: a cobalt block with the compact fact (day + time, or the requi
 ### Stage (signature)
 The hero backdrop: cobalt radial glow and angled beam behind the title; status tag (signal red, uppercase display, square) at the top; edition line; two-line title; caption bar at the bottom.
 
+Status tag states follow the tournament (`TournamentStatusTag`): "Inscripción abierta", "Check-in abierto" and "En vivo" carry the pulsing white dot; "Inscripción cerrada", "Finalizado" and "Cancelado" are the same red block without the dot. Drafts are never public. With no tournament on, the stage drops the tag and the countdown and shows a plain title and one line of copy.
+
 ### Countdown (signature)
 Server renders the date; the ticking `16d 04h 12m` mounts on the client. Once the start time passes it shows "En juego" instead of negative numbers.
 
