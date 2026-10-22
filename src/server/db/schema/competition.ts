@@ -79,6 +79,8 @@ export const teamRequests = pgTable(
       .notNull()
       .references(() => user.id),
     kind: text("kind").$type<"invite" | "join_request">().notNull(),
+    // Set for free-agent pool requests; they are answered through respondToPoolRequest.
+    tournamentId: uuid("tournament_id").references(() => tournaments.id),
     status: text("status").$type<"pending" | "accepted" | "declined" | "cancelled">().notNull().default("pending"),
     createdAt: tz("created_at").notNull().defaultNow(),
     resolvedAt: tz("resolved_at"),

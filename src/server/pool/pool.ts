@@ -1,8 +1,10 @@
-import { and, eq, exists, not, or, sql } from "drizzle-orm";
+import { and, asc, eq, exists, not, or, sql } from "drizzle-orm";
 import { evaluatePlayerRules } from "../../shared/eligibility";
 import type { EligibilityFailure } from "../../shared/eligibility";
 import { poolEntryInputSchema } from "../../shared/pool";
 import type { Role } from "../../shared/pool";
+import { compareRanks } from "../../shared/rank";
+import type { Rank } from "../../shared/rank";
 import { writeAudit } from "../audit";
 import type { Db, Executor } from "../db/client";
 import { entryPayments, poolEntries, registrationPlayers, tournaments } from "../db/schema";
@@ -149,4 +151,44 @@ export async function leavePool(
     });
     return { ok: true } as const;
   });
+}
+
+export async function getAvailableEntry(db: Executor, tournamentId: string, userId: string): Promise<PoolEntry | null> {
+  const [row] = await db
+    .select()
+    .from(poolEntries)
+    .where(and(availablePoolCondition(tournamentId), eq(poolEntries.userId, userId)));
+  return row ?? null;
+}
+
+export type PoolFilter = { role?: Role; minRank?: Rank; maxRank?: Rank };
+export type PoolListing = {
+  userId: string;
+  riotId: string;
+  rank: Rank | null;
+  roles: Role[];
+  level: number;
+  joinedAt: Date;
+};
+
+/** Available players, best rank first, then by who joined first; the role filter matches any listed role. */
+export async function listPool(db: Executor, tournamentId: string, filter: PoolFilter = {}): Promise<PoolListing[]> {
+  const rows = await db
+    .select()
+    .from(poolEntries)
+    .where(availablePoolCondition(tournamentId))
+    .orderBy(asc(poolEntries.joinedAt));
+  return rows
+    .map((r) => ({
+      userId: r.userId,
+      riotId: r.snapshot.riotId,
+      rank: r.snapshot.rank,
+      roles: r.roles,
+      level: r.snapshot.summonerLevel,
+      joinedAt: r.joinedAt,
+    }))
+    .filter((p) => !filter.role || p.roles.includes(filter.role))
+    .filter((p) => !filter.minRank || compareRanks(p.rank, filter.minRank) >= 0)
+    .filter((p) => !filter.maxRank || compareRanks(p.rank, filter.maxRank) <= 0)
+    .sort((a, b) => compareRanks(b.rank, a.rank) || a.joinedAt.getTime() - b.joinedAt.getTime());
 }

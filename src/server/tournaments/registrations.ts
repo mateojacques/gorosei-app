@@ -149,7 +149,7 @@ async function onOtherRoster(
   return !!row;
 }
 
-async function exemptRuleIdsFor(db: Executor, tournamentId: string, teamId: string): Promise<string[]> {
+export async function exemptRuleIdsFor(db: Executor, tournamentId: string, teamId: string): Promise<string[]> {
   const rows = await db
     .select({ ruleId: eligibilityExceptions.ruleId })
     .from(eligibilityExceptions)

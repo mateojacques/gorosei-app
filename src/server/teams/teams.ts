@@ -22,6 +22,7 @@ export type TeamRequest = {
   teamId: string;
   userId: string;
   kind: "invite" | "join_request";
+  tournamentId: string | null;
   status: "pending" | "accepted" | "declined" | "cancelled";
 };
 
@@ -400,6 +401,7 @@ const requestColumns = {
   teamId: teamRequests.teamId,
   userId: teamRequests.userId,
   kind: teamRequests.kind,
+  tournamentId: teamRequests.tournamentId,
   status: teamRequests.status,
 };
 
