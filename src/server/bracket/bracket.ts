@@ -2,8 +2,9 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { type MatchPhase, type MatchStatus, type UserRole, bestOfFor, isDelayed, isModerator } from "../../shared/match";
 import { seedOrder } from "../../shared/seeding";
 import type { Db, Executor } from "../db/client";
-import { brackets, matchReports, matches, registrationPlayers, registrations, teams } from "../db/schema";
+import { brackets, matchReports, matches, registrationPlayers, registrations, teams, tournaments } from "../db/schema";
 import type { Tournament } from "../tournaments/tournaments";
+import type { MatchStats } from "../matchday/stats";
 import { createBracket, listEngineMatches } from "./engine";
 
 /** Seeds the confirmed teams by average rank and stores the bracket; matches are mirrored by syncMatches. */
@@ -92,7 +93,7 @@ export type MatchView = {
   reports: { registrationId: string; score1: number; score2: number; screenshotUrl: string | null }[];
   lobby: { name: string; password: string } | null;
   riotMatchIds: string[];
-  stats: unknown | null;
+  stats: MatchStats[] | null;
 };
 
 async function loadTeams(tx: Executor, registrationIds: string[]): Promise<Map<string, MatchTeam>> {
@@ -161,7 +162,7 @@ export async function getMatchView(
     reports,
     lobby: priv && match.lobbyName !== null ? { name: match.lobbyName, password: match.lobbyPassword ?? "" } : null,
     riotMatchIds: match.riotMatchIds,
-    stats: match.stats ?? null,
+    stats: (match.stats as MatchStats[] | null) ?? null,
   };
 }
 
@@ -185,4 +186,54 @@ export async function listMatches(db: Db, tournamentId: string): Promise<MatchSu
     score: [m.score1, m.score2],
     winnerRegistrationId: m.winnerRegId,
   }));
+}
+
+export type ConsoleItem = {
+  matchId: string;
+  tournamentSlug: string;
+  kind: "dispute" | "confirm" | "lobby" | "delayed";
+  round: number;
+  teams: [string, string];
+  reportCount: number;
+  since: Date;
+};
+
+const KIND_ORDER: Record<ConsoleItem["kind"], number> = { dispute: 0, confirm: 1, lobby: 2, delayed: 3 };
+
+/** What needs a moderator: disputes first, then results to confirm, lobbies to create, then late matches; oldest first. */
+export async function getConsoleQueue(db: Db, now: Date): Promise<ConsoleItem[]> {
+  const rows = await db
+    .select({ match: matches, slug: tournaments.slug })
+    .from(matches)
+    .innerJoin(tournaments, eq(tournaments.id, matches.tournamentId))
+    .where(and(eq(tournaments.status, "live"), inArray(matches.status, ["open", "in_progress", "reported", "disputed"])));
+  if (rows.length === 0) return [];
+  const reports = await db
+    .select()
+    .from(matchReports)
+    .where(inArray(matchReports.matchId, rows.map((r) => r.match.id)));
+  const teamMap = await loadTeams(db, [...new Set(rows.flatMap((r) => [r.match.reg1Id, r.match.reg2Id]).filter((id): id is string => id !== null))]);
+
+  const items: ConsoleItem[] = [];
+  for (const { match, slug } of rows) {
+    const mine = reports.filter((r) => r.matchId === match.id);
+    const lastReport = mine.reduce<Date | null>((latest, r) => (!latest || r.updatedAt > latest ? r.updatedAt : latest), null);
+    let kind: ConsoleItem["kind"] | null = null;
+    if (match.status === "disputed") kind = "dispute";
+    else if (match.status === "reported" || (match.status === "in_progress" && mine.length > 0)) kind = "confirm";
+    else if (match.status === "open") kind = "lobby";
+    else if (isDelayed(match.openedAt, match.bestOf, now)) kind = "delayed";
+    if (!kind) continue;
+    const name = (id: string | null) => (id ? (teamMap.get(id)?.name ?? "") : "");
+    items.push({
+      matchId: match.id,
+      tournamentSlug: slug,
+      kind,
+      round: match.roundNo,
+      teams: [name(match.reg1Id), name(match.reg2Id)],
+      reportCount: mine.length,
+      since: (kind === "dispute" || kind === "confirm" ? lastReport : null) ?? match.openedAt ?? now,
+    });
+  }
+  return items.sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.since.getTime() - b.since.getTime());
 }

@@ -9,7 +9,7 @@ import type { RiotClient, RiotMatch } from "../riot/types";
 
 export type StatsRejection = "not_found" | "forbidden" | "invalid_id" | "riot_unavailable" | "not_this_match";
 
-export type MatchStats = RiotMatch & { players: (RiotMatch["players"][number] & { riotId: string | null })[] };
+export type MatchStats = Omit<RiotMatch, "players"> & { players: (RiotMatch["players"][number] & { riotId: string | null })[] };
 
 const MAX_MATCH_IDS = 3;
 const MIN_PER_ROSTER = 3;

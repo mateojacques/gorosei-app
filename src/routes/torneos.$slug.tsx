@@ -7,13 +7,22 @@ import { EligibilitySummary } from "../components/tournament/eligibility-summary
 import { PrizeMeter } from "../components/tournament/prize-meter";
 import { RegistrationStatusLabel, TournamentStatusTag } from "../components/tournament/registration-status";
 import { Button } from "../components/ui/button";
+import { useRealtime } from "../components/matchday/use-realtime";
+import { CheckInPanel } from "../components/matchday/check-in-panel";
+import { getCheckInPanel } from "../server/matchday/matchday.functions";
 import { getTournamentPage } from "../server/tournaments/tournaments.functions";
 import { formatArs } from "../shared/format";
 import { t } from "../shared/i18n";
 import { ROSTER_STARTERS } from "../shared/tournament";
 
 export const Route = createFileRoute("/torneos/$slug")({
-  loader: ({ params }) => getTournamentPage({ data: { slug: params.slug } }),
+  loader: async ({ params }) => {
+    const [tournament, panel] = await Promise.all([
+      getTournamentPage({ data: { slug: params.slug } }),
+      getCheckInPanel({ data: { slug: params.slug } }),
+    ]);
+    return { ...tournament, panel };
+  },
   head: ({ loaderData }) => {
     if (!loaderData) return { meta: [{ title: `${t("tournament.notFound")} · ${t("app.name")}` }] };
     const { title, edition } = loaderData;
@@ -29,6 +38,7 @@ export const Route = createFileRoute("/torneos/$slug")({
 });
 
 type TournamentPageData = Awaited<ReturnType<typeof getTournamentPage>>;
+type Panel = Awaited<ReturnType<typeof getCheckInPanel>>;
 
 // Only plain web links become clickable; anything else in the field stays text.
 const isWebUrl = (url: string) => /^https?:\/\//i.test(url);
@@ -79,6 +89,7 @@ function TournamentPage() {
       <div className="px-4 py-12 sm:px-8 md:py-16">
         <div className="mx-auto grid max-w-6xl gap-14 lg:grid-cols-[1fr_1.1fr] lg:items-start lg:gap-16">
           <div className="flex flex-col gap-12">
+            <MatchDay panel={tournament.panel} tournamentId={tournament.id} />
             <PrizeMeter
               poolArs={tournament.poolArs}
               goalArs={tournament.prizeGoalArs}
@@ -108,6 +119,28 @@ function TournamentPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+/** Check-in while it runs, a way into the current match once the bracket is live; nothing for anyone else. */
+function MatchDay({ panel, tournamentId }: { panel: Panel; tournamentId: string }) {
+  if (!panel) return null;
+  if (panel.kind === "check_in") return <CheckInPanel panel={panel} tournamentId={tournamentId} />;
+  return <LivePanel panel={panel} tournamentId={tournamentId} />;
+}
+
+function LivePanel({ panel, tournamentId }: { panel: Extract<NonNullable<Panel>, { kind: "live" }>; tournamentId: string }) {
+  useRealtime([`tournament:${tournamentId}`]);
+  return (
+    <Block title={t("matchday.live.title")}>
+      {panel.matchId ? (
+        <Button asChild size="lg" className="mt-3">
+          <a href={`/partidas/${panel.matchId}`}>{t("matchday.live.go")}</a>
+        </Button>
+      ) : (
+        <p className="mt-3 text-ink-muted">{t("matchday.live.none")}</p>
+      )}
+    </Block>
   );
 }
 

@@ -9,9 +9,11 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
   cancelTournamentFn,
+  closeCheckInFn,
   closeRegistrationFn,
   getAdminRegistrations,
   getAdminTournament,
+  openCheckInFn,
   openRegistrationFn,
   updateTournamentFn,
 } from "../server/tournaments/admin.functions";
@@ -133,6 +135,46 @@ function Lifecycle({ tournament }: { tournament: Tournament }) {
           >
             {t("admin.lifecycle.close")}
           </Button>
+        )}
+        {status === "registration_closed" && (
+          <Button
+            variant="secondary"
+            disabled={pending}
+            onClick={() =>
+              run(async () => {
+                const result = await openCheckInFn({ data: { id: tournament.id, force: true } });
+                return result.ok ? result : { ok: false as const, reason: "invalid_state" as const };
+              })
+            }
+          >
+            {t("admin.lifecycle.openCheckIn")}
+          </Button>
+        )}
+        {status === "check_in" && (
+          <Button
+            variant="secondary"
+            disabled={pending}
+            onClick={async () => {
+              let message: string | undefined;
+              await run(async () => {
+                const result = await closeCheckInFn({ data: { id: tournament.id, force: true } });
+                if (!result.ok) return { ok: false as const, reason: "invalid_state" as const };
+                message = t("admin.lifecycle.checkInClosed", {
+                  outcome: t(`admin.lifecycle.outcome.${result.outcome}`),
+                  forfeited: result.forfeited,
+                });
+                return result;
+              });
+              if (message) setNotice(message);
+            }}
+          >
+            {t("admin.lifecycle.closeCheckIn")}
+          </Button>
+        )}
+        {(status === "check_in" || status === "live") && (
+          <a href="/mod" className="font-semibold text-cobalt-light underline underline-offset-4 hover:text-ink">
+            {t("admin.lifecycle.console")}
+          </a>
         )}
         {cancellable && !cancelling && (
           <Button variant="ghost" className="px-0" disabled={pending} onClick={() => setCancelling(true)}>
