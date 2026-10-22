@@ -354,3 +354,39 @@ test("views expose team, roster and ordering", async () => {
   expect(await getRegistrationForTeam(testDb, tournament.id, "nope")).toBeNull();
   expect(await getRegistrationView(testDb, crypto.randomUUID())).toBeNull();
 });
+
+test("updateRoster hooks run in the same transaction", async () => {
+  const tournament = await openTournament({
+    eligibilityRules: [{ id: "r1", type: "player_rank_range", max: { tier: "GOLD", division: "I" } }],
+  });
+  const { team, captain, ids } = await squad("h", 2, { tier: "GOLD", division: "II", lp: 0 });
+  const registrationId = await createTestRegistration(tournament.id, team.id, { starters: ids, subs: [] });
+  await linkedPlayer("newbie", DIA1);
+  const hook = async (tx: Parameters<NonNullable<NonNullable<Parameters<typeof updateRoster>[4]>["inTransaction"]>>[0]) => {
+    await tx.insert(teamMembers).values({ teamId: team.id, userId: "newbie", role: "member" });
+  };
+  const result = await updateRoster(deps(), captain, registrationId, { starters: [...ids, "newbie"], subs: [] }, { joining: ["newbie"], inTransaction: hook });
+  expect(result).toMatchObject({ ok: false, reason: "ineligible" });
+  expect(await testDb.select().from(teamMembers).where(eq(teamMembers.userId, "newbie"))).toHaveLength(0);
+
+  // a rejection found after the hook ran also rolls the hook back: the hook forgets to add "ok" as a member
+  await linkedPlayer("ok", { tier: "GOLD", division: "III", lp: 0 });
+  await linkedPlayer("other", { tier: "GOLD", division: "III", lp: 0 });
+  const forgetful = await updateRoster(deps(), captain, registrationId, { starters: [...ids, "ok"], subs: [] }, {
+    joining: ["ok"],
+    inTransaction: async (tx) => {
+      await tx.insert(teamMembers).values({ teamId: team.id, userId: "other", role: "member" });
+    },
+  });
+  expect(forgetful).toMatchObject({ ok: false, reason: "player_not_member" });
+  expect(await testDb.select().from(teamMembers).where(eq(teamMembers.userId, "other"))).toHaveLength(0);
+
+  const accepted = await updateRoster(deps(), captain, registrationId, { starters: [...ids, "ok"], subs: [] }, {
+    joining: ["ok"],
+    inTransaction: async (tx) => {
+      await tx.insert(teamMembers).values({ teamId: team.id, userId: "ok", role: "member" });
+    },
+  });
+  expect(accepted.ok).toBe(true);
+  expect(await testDb.select().from(teamMembers).where(eq(teamMembers.userId, "ok"))).toHaveLength(1);
+});

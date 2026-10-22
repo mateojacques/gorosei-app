@@ -229,6 +229,7 @@ export const esAR = {
   "team.error.already_pending": "Ya hay una solicitud pendiente con ese jugador.",
   "team.error.team_not_found": "No encontramos ese equipo.",
   "team.error.not_allowed": "No podés responder esta solicitud.",
+  "team.error.pool_request": "Esta solicitud es del pool de agentes libres y se responde desde ahí.",
   "team.error.not_pending": "Esta solicitud ya no está pendiente.",
   "team.error.not_member": "Esa persona no es parte del equipo.",
   "team.error.captain_must_transfer": "Pasale la capitanía a otro integrante antes de salir del equipo.",
@@ -454,5 +455,10 @@ export const esAR = {
   "pool.error.already_on_roster": "Ya estás en el roster de un equipo en este torneo.",
   "pool.error.ineligible": "No cumplís las reglas de elegibilidad del torneo.",
   "pool.error.invalid_roles": "Elegí entre 1 y 5 roles, sin repetir.",
+  "pool.error.not_allowed": "No podés responder esta solicitud.",
+  "pool.error.not_pending": "Esta solicitud ya no está pendiente.",
+  "pool.error.closed": "La inscripción a este torneo no está abierta.",
+  "pool.error.roster_full": "El equipo ya no tiene lugar para titulares.",
+  "pool.error.player_already_registered": "Ese jugador ya está en el roster de otro equipo.",
   "pool.error.not_in_pool": "No estás en el pool de agentes libres.",
 } as const;

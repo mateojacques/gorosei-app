@@ -228,10 +228,12 @@ export async function respondToRequest(
   actorId: string,
   requestId: string,
   accept: boolean,
-): Promise<{ ok: true } | { ok: false; reason: "not_allowed" | "not_pending" }> {
+): Promise<{ ok: true } | { ok: false; reason: "not_allowed" | "not_pending" | "pool_request" }> {
   return db.transaction(async (tx) => {
     const request = await lockPendingRequest(tx, requestId);
     if (!request) return { ok: false, reason: "not_pending" } as const;
+    // Pool requests place the player on a roster, which only respondToPoolRequest does.
+    if (request.tournamentId) return { ok: false, reason: "pool_request" } as const;
     const team = await lockTeam(tx, request.teamId);
     // Invites are answered by the invited user, join requests by the captain.
     const answerer = request.kind === "invite" ? request.userId : team?.captainUserId;

@@ -42,6 +42,20 @@ export type RosterResult =
   | { ok: true; registrationId: string }
   | { ok: false; reason: RosterRejection; failures?: EligibilityFailure[] };
 
+/**
+ * `joining` users are about to become team members: the pre-check treats them as members. `inTransaction` runs
+ * after the team, tournament and registration locks and before the membership re-check, and must insert the
+ * `team_members` rows for `joining`. Anything it wrote is rolled back if the roster is then rejected.
+ */
+export type RosterHooks = { joining?: string[]; inTransaction?: (tx: Executor) => Promise<void> };
+
+/** Thrown inside the transaction to undo a hook's writes when the roster is rejected after the hook ran. */
+class RosterRollback extends Error {
+  constructor(readonly result: RosterResult) {
+    super("roster rolled back");
+  }
+}
+
 export type RegistrationView = {
   id: string;
   status: RegistrationStatus;
@@ -276,6 +290,7 @@ export async function updateRoster(
   captainId: string,
   registrationId: string,
   roster: RosterInput,
+  hooks: RosterHooks = {},
 ): Promise<RosterResult> {
   const { db } = deps;
   const loaded = await loadRegistration(db, registrationId);
@@ -285,7 +300,9 @@ export async function updateRoster(
   const shape = rosterShape(tournament, roster);
   if (shape) return { ok: false, reason: shape };
   const userIds = [...roster.starters, ...roster.subs];
-  if (!(await allMembers(db, registration.teamId, userIds))) return { ok: false, reason: "player_not_member" };
+  const joining = hooks.joining ?? [];
+  const existingMembers = userIds.filter((id) => !joining.includes(id));
+  if (!(await allMembers(db, registration.teamId, existingMembers))) return { ok: false, reason: "player_not_member" };
   if (await onOtherRoster(db, tournament.id, userIds, registrationId)) {
     return { ok: false, reason: "player_already_registered" };
   }
@@ -308,13 +325,22 @@ export async function updateRoster(
   );
   if (failures.length > 0) return { ok: false, reason: "ineligible", failures };
 
+  let hookRan = false;
+  const rejectAfterHook = (result: RosterResult): RosterResult => {
+    if (hookRan) throw new RosterRollback(result);
+    return result;
+  };
   try {
-    return await db.transaction(async (tx): Promise<RosterResult> => {
+    const result = await db.transaction(async (tx): Promise<RosterResult> => {
       await tx.select({ id: teams.id }).from(teams).where(eq(teams.id, registration.teamId)).for("update");
       const current = await lockTournament(tx, tournament.id);
       const [locked] = await tx.select().from(registrations).where(eq(registrations.id, registrationId)).for("update");
       if (isLocked(locked!, current!)) return { ok: false, reason: "locked" };
-      if (!(await allMembers(tx, registration.teamId, userIds))) return { ok: false, reason: "player_not_member" };
+      if (hooks.inTransaction) {
+        await hooks.inTransaction(tx);
+        hookRan = true;
+      }
+      if (!(await allMembers(tx, registration.teamId, userIds))) return rejectAfterHook({ ok: false, reason: "player_not_member" });
       // A confirmed team's change must keep it confirmed: full, eligible and paid.
       if (
         locked!.status === "confirmed" &&
@@ -325,7 +351,7 @@ export async function updateRoster(
           await paidUserIds(tx, tournament.id),
         )
       ) {
-        return { ok: false, reason: "would_unconfirm" };
+        return rejectAfterHook({ ok: false, reason: "would_unconfirm" });
       }
 
       const before = await tx
@@ -373,7 +399,9 @@ export async function updateRoster(
       await recomputeConfirmations(tx, tournament.id, new Date());
       return { ok: true, registrationId };
     });
+    return result;
   } catch (error) {
+    if (error instanceof RosterRollback) return error.result;
     return rejectOnConflict(error);
   }
 }

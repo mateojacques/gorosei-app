@@ -27,7 +27,7 @@ export type PoolRejection =
  * tournament) and they are on no active roster of the tournament. "Placed" is never stored, so every path that
  * puts someone on a roster takes them out of the pool without any sync code.
  */
-export function availablePoolCondition(tournamentId: string) {
+export function payingEntryCondition(tournamentId: string) {
   return and(
     eq(poolEntries.tournamentId, tournamentId),
     eq(poolEntries.active, true),
@@ -38,6 +38,12 @@ export function availablePoolCondition(tournamentId: string) {
           and ${entryPayments.userId} = ${poolEntries.userId} and ${entryPayments.forfeited} = false)`,
       ),
     ),
+  );
+}
+
+export function availablePoolCondition(tournamentId: string) {
+  return and(
+    payingEntryCondition(tournamentId),
     not(
       exists(
         sql`(select 1 from ${registrationPlayers} where ${registrationPlayers.tournamentId} = ${poolEntries.tournamentId}
@@ -158,6 +164,15 @@ export async function getAvailableEntry(db: Executor, tournamentId: string, user
     .select()
     .from(poolEntries)
     .where(and(availablePoolCondition(tournamentId), eq(poolEntries.userId, userId)));
+  return row ?? null;
+}
+
+/** An active, fee-covered entry whether or not the player is on a roster; roster conflicts are judged by the roster code. */
+export async function getPayingEntry(db: Executor, tournamentId: string, userId: string): Promise<PoolEntry | null> {
+  const [row] = await db
+    .select()
+    .from(poolEntries)
+    .where(and(payingEntryCondition(tournamentId), eq(poolEntries.userId, userId)));
   return row ?? null;
 }
 
