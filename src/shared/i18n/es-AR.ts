@@ -299,6 +299,14 @@ export const esAR = {
   "tournament.col.payments": "Pagos",
 
   "site.admin": "Admin",
+  "template.weekday.0": "Domingo",
+  "template.weekday.1": "Lunes",
+  "template.weekday.2": "Martes",
+  "template.weekday.3": "Miércoles",
+  "template.weekday.4": "Jueves",
+  "template.weekday.5": "Viernes",
+  "template.weekday.6": "Sábado",
+
   "admin.tournaments.title": "Torneos",
   "admin.tournaments.new": "Nuevo torneo",
   "admin.tournaments.empty": "Todavía no hay torneos.",
