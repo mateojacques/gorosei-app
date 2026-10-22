@@ -33,9 +33,10 @@ export const getTeamPage = createServerFn({ method: "GET" })
     const { db, teams } = await teamDeps();
     const team = await teams.getTeamBySlug(db, data.slug);
     if (!team) throw notFound();
+    const history = await teams.getTeamHistory(db, team.id);
 
     const user = await sessionUser();
-    if (!user) return { team, viewer: null, pendingRequests: [] };
+    if (!user) return { team, history, viewer: null, pendingRequests: [] };
     const role = team.members.find((m) => m.userId === user.id)?.role ?? null;
     const own = await teams.listPendingRequestsForUser(db, user.id);
     const viewer = {
@@ -47,7 +48,7 @@ export const getTeamPage = createServerFn({ method: "GET" })
       inviteId: own.invites.find((r) => r.teamId === team.id)?.id ?? null,
     };
     const pendingRequests = role === "captain" ? await teams.listPendingRequestsForTeam(db, team.id) : [];
-    return { team, viewer, pendingRequests };
+    return { team, history, viewer, pendingRequests };
   });
 
 export const getMyTeams = createServerFn({ method: "GET" }).handler(async () => {

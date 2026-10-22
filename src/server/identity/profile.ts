@@ -1,7 +1,9 @@
 import { and, desc, eq, sql } from "drizzle-orm";
+import type { TournamentStatus } from "../../shared/tournament";
 import type { Rank } from "../../shared/rank";
 import type { Db } from "../db/client";
 import { registrationPlayers, registrations, riotAccounts, teamMembers, teams, tournaments } from "../db/schema";
+import { placementsFor } from "../tournaments/results";
 import { getCurrentRank, getSeasonPeak } from "./ranks";
 
 export type PublicProfile = {
@@ -13,7 +15,16 @@ export type PublicProfile = {
   seasonPeak: Rank | null;
   teams: { name: string; tag: string; slug: string }[];
   /** Confirmed registrations, newest tournament first. */
-  tournaments: { title: string; edition: number; slug: string; startsAt: Date; teamName: string }[];
+  tournaments: {
+    title: string;
+    edition: number;
+    slug: string;
+    startsAt: Date;
+    teamName: string;
+    teamSlug: string;
+    status: TournamentStatus;
+    placement: number | null;
+  }[];
 };
 
 export async function getPublicProfile(db: Db, gameName: string, tagLine: string): Promise<PublicProfile | null> {
@@ -44,6 +55,10 @@ export async function getPublicProfile(db: Db, gameName: string, tagLine: string
         slug: tournaments.slug,
         startsAt: tournaments.startsAt,
         teamName: teams.name,
+        teamSlug: teams.slug,
+        status: tournaments.status,
+        tournamentId: tournaments.id,
+        registrationId: registrations.id,
       })
       .from(registrationPlayers)
       .innerJoin(registrations, eq(registrations.id, registrationPlayers.registrationId))
@@ -58,6 +73,7 @@ export async function getPublicProfile(db: Db, gameName: string, tagLine: string
       )
       .orderBy(desc(tournaments.startsAt)),
   ]);
+  const placements = await placementsFor(db, playedTournaments.map((t) => t.tournamentId));
   return {
     gameName: account.gameName,
     tagLine: account.tagLine,
@@ -66,6 +82,9 @@ export async function getPublicProfile(db: Db, gameName: string, tagLine: string
     currentRank,
     seasonPeak,
     teams: playerTeams,
-    tournaments: playedTournaments,
+    tournaments: playedTournaments.map(({ tournamentId: _t, registrationId, ...t }) => ({
+      ...t,
+      placement: t.status === "finished" ? (placements.get(registrationId) ?? null) : null,
+    })),
   };
 }

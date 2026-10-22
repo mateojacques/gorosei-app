@@ -60,6 +60,40 @@ test("lists the player's teams and confirmed tournament registrations", async ()
 
   expect(profile?.teams).toEqual([{ name: "Los Pibes", tag: expect.any(String), slug: team.slug }]);
   expect(profile?.tournaments).toEqual([
-    { title: "Copa Semanal LAS", edition: 3, slug: tournament.slug, startsAt: tournament.startsAt, teamName: "Los Pibes" },
+    {
+      title: "Copa Semanal LAS",
+      edition: 3,
+      slug: tournament.slug,
+      startsAt: tournament.startsAt,
+      teamName: "Los Pibes",
+      teamSlug: team.slug,
+      status: "registration_open",
+      placement: null,
+    },
+  ]);
+});
+
+test("shows the placement of finished tournaments and none for running ones", async () => {
+  const { createTestRegistration, createTestTeam, createTestTournament, linkedPlayer } = await import("../../helpers/competition");
+  const { brackets, registrations, tournaments } = await import("../../../src/server/db/schema");
+  const { eq } = await import("drizzle-orm");
+  const mates = await Promise.all(["m1", "m2", "m3", "m4"].map((id) => linkedPlayer(id)));
+  const team = await createTestTeam("u1", mates, "Los Pibes");
+  const won = await createTestTournament({ status: "registration_open", entryFeeArs: 0, startsAt: new Date("2026-11-01T20:00:00Z") });
+  const live = await createTestTournament({ status: "registration_open", entryFeeArs: 0, startsAt: new Date("2026-11-08T20:00:00Z"), registrationClosesAt: new Date("2026-11-07T20:00:00Z") });
+  const wonReg = await createTestRegistration(won.id, team.id, { starters: ["u1", ...mates], subs: [] });
+  await createTestRegistration(live.id, team.id, { starters: ["u1", ...mates], subs: [] });
+  await testDb.update(tournaments).set({ status: "finished" }).where(eq(tournaments.id, won.id));
+  await testDb.update(tournaments).set({ status: "live" }).where(eq(tournaments.id, live.id));
+  await testDb.insert(brackets).values({ tournamentId: won.id, data: {} as never, stageId: 0, finalStandings: [{ registrationId: wonReg, rank: 1 }] });
+  // A withdrawn registration stays out.
+  const gone = await createTestTournament({ status: "registration_open", entryFeeArs: 0 });
+  const goneReg = await createTestRegistration(gone.id, team.id, { starters: ["u1", ...mates], subs: [] });
+  await testDb.update(registrations).set({ status: "withdrawn" }).where(eq(registrations.id, goneReg));
+
+  const profile = await getPublicProfile(testDb, "Señor Café", "LAS");
+  expect(profile!.tournaments.map((t) => [t.slug, t.status, t.placement])).toEqual([
+    [live.slug, "live", null],
+    [won.slug, "finished", 1],
   ]);
 });

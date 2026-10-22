@@ -712,4 +712,12 @@ export const esAR = {
   "bracket.section.grand_final": "Gran final",
   "bracket.section.main": "Cuadro",
   "bracket.section.third_place": "Tercer puesto",
+  "placement.champion": "Campeón",
+  "placement.second": "2.º puesto",
+  "placement.third": "3.er puesto",
+  "placement.nth": "{n}.º puesto",
+  "placement.inProgress": "En curso",
+  "placement.none": "Sin puesto",
+  "team.history": "Historial",
+  "team.noHistory": "Este equipo todavía no jugó ningún torneo.",
 } as const;

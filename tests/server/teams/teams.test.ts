@@ -226,3 +226,39 @@ test("renameTeam validates like createTeam, is captain-only, and keeps an auto-f
   // keeping the same name and tag is not a clash with itself
   expect(await renameTeam(testDb, "cap", team.id, { name: "Pibes", tag: "PBS" })).toEqual({ ok: true });
 });
+
+test("getTeamHistory lists confirmed registrations with placements, newest first", async () => {
+  const { getTeamHistory } = await import("../../../src/server/teams/teams");
+  const { createTestRegistration } = await import("../../helpers/competition");
+  const { brackets, registrations, tournaments } = await import("../../../src/server/db/schema");
+  const ids = await Promise.all(["h1", "h2", "h3", "h4", "h5"].map((id) => linkedPlayer(id)));
+  const team = await createTestTeam(ids[0]!, ids.slice(1), "Historia");
+  expect(await getTeamHistory(testDb, team.id)).toEqual([]);
+
+  const at = (day: number) => ({ startsAt: new Date(Date.UTC(2026, 10, day, 20)), registrationClosesAt: new Date(Date.UTC(2026, 10, day, 10)) });
+  const older = await createTestTournament({ status: "registration_open", entryFeeArs: 0, title: "Copa Vieja", ...at(1) });
+  const newer = await createTestTournament({ status: "registration_open", entryFeeArs: 0, title: "Copa Nueva", ...at(8) });
+  const pending = await createTestTournament({ status: "registration_open", ...at(15) });
+  const olderReg = await createTestRegistration(older.id, team.id, { starters: ids, subs: [] });
+  await createTestRegistration(newer.id, team.id, { starters: ids, subs: [] });
+  await createTestRegistration(pending.id, team.id, { starters: ids, subs: [] });
+  await testDb.update(tournaments).set({ status: "finished" }).where(eq(tournaments.id, older.id));
+  await testDb.insert(brackets).values({ tournamentId: older.id, data: {} as never, stageId: 0, finalStandings: [{ registrationId: olderReg, rank: 3 }] });
+  expect((await testDb.select().from(registrations).where(eq(registrations.tournamentId, pending.id)))[0]!.status).toBe("pending");
+
+  expect(await getTeamHistory(testDb, team.id)).toEqual([
+    { title: "Copa Nueva", edition: newer.edition, slug: newer.slug, startsAt: newer.startsAt, status: "registration_open", placement: null },
+    { title: "Copa Vieja", edition: older.edition, slug: older.slug, startsAt: older.startsAt, status: "finished", placement: 3 },
+  ]);
+});
+
+test("an auto-formed team's history works the same", async () => {
+  const { getTeamHistory } = await import("../../../src/server/teams/teams");
+  const { createTestRegistration } = await import("../../helpers/competition");
+  const ids = await Promise.all(["a1", "a2", "a3", "a4", "a5"].map((id) => linkedPlayer(id)));
+  const t = await createTestTournament({ status: "registration_open", entryFeeArs: 0 });
+  const team = await createTestTeam(ids[0]!, ids.slice(1), "Auto");
+  await testDb.update(teams).set({ autoFormedTournamentId: t.id }).where(eq(teams.id, team.id));
+  await createTestRegistration(t.id, team.id, { starters: ids, subs: [] });
+  expect((await getTeamHistory(testDb, team.id)).map((h) => h.slug)).toEqual([t.slug]);
+});

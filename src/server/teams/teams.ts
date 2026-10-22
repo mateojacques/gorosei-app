@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, like, ne, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, ne, notInArray, or, sql } from "drizzle-orm";
 import type { Rank } from "../../shared/rank";
 import { parseRiotId } from "../../shared/riot-id";
 import { slugify } from "../../shared/slug";
@@ -16,6 +16,8 @@ import {
 } from "../db/schema";
 import { getCurrentRank } from "../identity/ranks";
 import { lockTournament, recomputeConfirmations } from "../tournaments/confirmations";
+import { placementsFor } from "../tournaments/results";
+import type { TournamentStatus } from "../../shared/tournament";
 
 export type TeamRequest = {
   id: string;
@@ -455,6 +457,31 @@ export async function getTeamBySlug(db: Db, slug: string): Promise<TeamView | nu
     })),
   );
   return { id: team.id, slug: team.slug, name: team.name, tag: team.tag, captainUserId: team.captainUserId, autoFormed: team.autoFormedTournamentId !== null, members };
+}
+
+export type TeamHistoryItem = { title: string; edition: number; slug: string; startsAt: Date; status: TournamentStatus; placement: number | null };
+
+/** The team's confirmed registrations, newest tournament first, with the final placement once finished. */
+export async function getTeamHistory(db: Db, teamId: string): Promise<TeamHistoryItem[]> {
+  const rows = await db
+    .select({
+      registrationId: registrations.id,
+      tournamentId: tournaments.id,
+      title: tournaments.title,
+      edition: tournaments.edition,
+      slug: tournaments.slug,
+      startsAt: tournaments.startsAt,
+      status: tournaments.status,
+    })
+    .from(registrations)
+    .innerJoin(tournaments, eq(tournaments.id, registrations.tournamentId))
+    .where(and(eq(registrations.teamId, teamId), eq(registrations.status, "confirmed")))
+    .orderBy(desc(tournaments.startsAt));
+  const placements = await placementsFor(db, rows.map((r) => r.tournamentId));
+  return rows.map(({ registrationId, tournamentId: _t, ...r }) => ({
+    ...r,
+    placement: r.status === "finished" ? (placements.get(registrationId) ?? null) : null,
+  }));
 }
 
 export async function listTeamsForUser(

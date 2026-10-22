@@ -50,6 +50,16 @@ export async function getTournamentResults(db: Db, tournamentId: string, prizeSh
   return { champion: podium.find((p) => p.rank === 1)?.team ?? null, podium, vods };
 }
 
+/** Final rank of each registration in the given tournaments, read in one query. */
+export async function placementsFor(db: Db, tournamentIds: string[]): Promise<Map<string, number>> {
+  if (tournamentIds.length === 0) return new Map();
+  const rows = await db
+    .select({ standings: brackets.finalStandings })
+    .from(brackets)
+    .where(inArray(brackets.tournamentId, [...new Set(tournamentIds)]));
+  return new Map(rows.flatMap((r) => (r.standings ?? []).map((s) => [s.registrationId, s.rank] as const)));
+}
+
 export type NextCup = { slug: string; title: string; edition: number; startsAt: Date };
 
 export async function getNextTournament(db: Db, current: { id: string; startsAt: Date }): Promise<NextCup | null> {

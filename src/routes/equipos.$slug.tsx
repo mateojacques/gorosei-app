@@ -3,6 +3,7 @@ import { type FormEvent, useId } from "react";
 import { CaptionBar } from "../components/cup/caption-bar";
 import { NotFound } from "../components/site/not-found";
 import { Field, FormAlert } from "../components/site/form";
+import { Placement } from "../components/team/placement";
 import { SectionHeading, Th, useTeamAction } from "../components/team/team-ui";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -17,6 +18,7 @@ import {
   transferCaptainFn,
 } from "../server/teams/teams.functions";
 import { renameTeamFn, respondToPoolRequestFn } from "../server/pool/pool.functions";
+import { formatLongDate } from "../shared/format";
 import { t } from "../shared/i18n";
 import { formatRank } from "../shared/rank";
 import { formatRiotId, riotIdToSlug } from "../shared/riot-id";
@@ -45,7 +47,7 @@ const respond = (request: { id: string; tournamentId: string | null }, accept: b
     ? respondToPoolRequestFn({ data: { requestId: request.id, accept } })
     : respondToRequestFn({ data: { requestId: request.id, accept } });
 function TeamPage() {
-  const { team, viewer, pendingRequests } = Route.useLoaderData();
+  const { team, history, viewer, pendingRequests } = Route.useLoaderData();
   const isCaptain = viewer?.role === "captain";
   const count = team.members.length;
   return (
@@ -67,6 +69,7 @@ function TeamPage() {
       <div className="px-4 py-12 sm:px-8 md:py-16">
         <div className="mx-auto flex max-w-4xl flex-col gap-14">
           <Roster team={team} isCaptain={isCaptain} />
+          <History items={history} />
           {isCaptain && team.autoFormed && <KeepTeam teamId={team.id} name={team.name} tag={team.tag} />}
           {isCaptain && <Invite teamId={team.id} />}
           {isCaptain && <PendingRequests requests={pendingRequests} />}
@@ -74,6 +77,35 @@ function TeamPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function History({ items }: { items: TeamPageData["history"] }) {
+  const headingId = useId();
+  return (
+    <section aria-labelledby={headingId}>
+      <SectionHeading id={headingId}>{t("team.history")}</SectionHeading>
+      {items.length === 0 ? (
+        <p className="mt-2 text-ink-muted">{t("team.noHistory")}</p>
+      ) : (
+        <ul className="mt-3 border-b border-line">
+          {items.map((item) => (
+            <li key={item.slug} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-line py-3">
+              <a
+                href={`/torneos/${item.slug}`}
+                className="font-semibold underline-offset-4 [overflow-wrap:anywhere] hover:text-cobalt-light hover:underline"
+              >
+                {item.title} #{item.edition}
+              </a>
+              <span className="flex items-baseline gap-4">
+                <Placement rank={item.placement} status={item.status} />
+                <span className="text-ink-muted">{formatLongDate(new Date(item.startsAt))}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

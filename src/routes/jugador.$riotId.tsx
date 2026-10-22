@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { CaptionBar } from "../components/cup/caption-bar";
 import { NotFound } from "../components/site/not-found";
+import { Placement } from "../components/team/placement";
 import { getProfileBySlug } from "../server/identity/profile.functions";
 import { formatLongDate } from "../shared/format";
 import { t } from "../shared/i18n";
@@ -65,17 +66,25 @@ function ProfilePage() {
           </ProfileList>
           <ProfileList title={t("profile.tournaments")} empty={t("profile.noTournaments")}>
             {profile.tournaments.map((tournament) => (
-              <li key={tournament.slug} className="flex flex-wrap justify-between gap-x-4 border-t border-line py-3">
-                <span>
+              <li key={tournament.slug} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-line py-3">
+                <span className="[overflow-wrap:anywhere]">
                   <a
                     href={`/torneos/${tournament.slug}`}
                     className="font-semibold underline-offset-4 hover:text-cobalt-light hover:underline"
                   >
                     {tournament.title} #{tournament.edition}
                   </a>{" "}
-                  <span className="text-ink-muted">· {tournament.teamName}</span>
+                  <span className="text-ink-muted">
+                    ·{" "}
+                    <a href={`/equipos/${tournament.teamSlug}`} className="underline-offset-4 hover:text-ink hover:underline">
+                      {tournament.teamName}
+                    </a>
+                  </span>
                 </span>
-                <span className="text-ink-muted">{formatLongDate(new Date(tournament.startsAt))}</span>
+                <span className="flex items-baseline gap-4">
+                  <Placement rank={tournament.placement} status={tournament.status} />
+                  <span className="text-ink-muted">{formatLongDate(new Date(tournament.startsAt))}</span>
+                </span>
               </li>
             ))}
           </ProfileList>
