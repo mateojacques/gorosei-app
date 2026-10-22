@@ -144,3 +144,19 @@ export const getBrowsePage = createServerFn({ method: "GET" })
     const [page, origin] = await Promise.all([loadBrowsePage(db, data, new Date()), configuredSiteOrigin()]);
     return { ...page, origin };
   });
+
+/** The signed-in player's checklist data for one tournament; null when signed out. */
+export const getViewerStatus = createServerFn({ method: "GET" })
+  .validator(z.object({ slug: z.string() }))
+  .handler(async ({ data }) => {
+    const user = await sessionUser();
+    if (!user) return null;
+    const [{ db }, { getTournamentBySlug }, { getViewerTournamentStatus }] = await Promise.all([
+      import("../db/client"),
+      import("./tournaments"),
+      import("./viewer-status"),
+    ]);
+    const tournament = await getTournamentBySlug(db, data.slug);
+    if (!tournament || tournament.status === "draft") return null;
+    return getViewerTournamentStatus(db, user.id, tournament.id);
+  });
