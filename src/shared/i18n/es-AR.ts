@@ -411,6 +411,7 @@ export const esAR = {
   "registration.status.waitlisted": "En espera",
   "registration.status.withdrawn": "Retirado",
   "registration.status.dropped": "Afuera",
+  "registration.status.forfeited": "Perdió por W.O.",
   "registration.explain.pending":
     "El equipo está inscripto y espera los pagos: se confirma cuando 5 jugadores del roster hayan pagado y el roster esté completo.",
   "registration.explain.pending_free": "El equipo está inscripto: se confirma cuando tenga 5 titulares que cumplan las reglas.",
@@ -419,6 +420,7 @@ export const esAR = {
     "El equipo cumple todo, pero el cupo está lleno: está en lista de espera y entra si se libera un lugar antes del cierre.",
   "registration.explain.withdrawn": "El equipo se retiró del torneo.",
   "registration.explain.dropped": "El equipo quedó afuera del torneo.",
+  "registration.explain.forfeited": "El equipo no completó el check-in y quedó afuera del cuadro.",
   "registration.paidProgress": "{paid}/{total} pagos",
   "registration.title": "Inscripción",
   "registration.roster": "Roster",
@@ -562,4 +564,9 @@ export const esAR = {
   "admin.pool.previewNone": "Con el pool de hoy no se arma ningún equipo.",
   "admin.pool.previewUnplaced": "Quedarían sin equipo (reciben crédito): {players}",
   "admin.pool.previewFailing": "No cumplen las reglas y quedarían afuera: {players}",
+  "matchday.error.not_open": "El check-in no está abierto.",
+  "matchday.error.not_on_roster": "No estás en el roster de este equipo.",
+  "matchday.error.registration_inactive": "Este equipo ya no está en el torneo.",
+  "matchday.error.not_captain": "Solo el capitán puede hacer esto.",
+  "matchday.error.invalid_state": "Esto ya no se puede hacer en el estado actual.",
 } as const;

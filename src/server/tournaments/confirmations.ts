@@ -14,7 +14,7 @@ import type { Tournament } from "./tournaments";
  */
 
 const LIVE_STATUSES: RegistrationStatus[] = ["pending", "confirmed", "waitlisted"];
-const INACTIVE_STATUSES: RegistrationStatus[] = ["withdrawn", "dropped"];
+const INACTIVE_STATUSES: RegistrationStatus[] = ["withdrawn", "dropped", "forfeited"];
 
 const STATUS_AUDIT: Partial<Record<RegistrationStatus, string>> = {
   confirmed: "registration.confirmed",

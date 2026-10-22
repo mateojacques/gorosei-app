@@ -107,6 +107,8 @@ export const registrations = pgTable(
     status: text("status").$type<RegistrationStatus>().notNull().default("pending"),
     // When the registration last started qualifying (full, eligible, paid); orders cap slots and the waitlist.
     qualifiedAt: tz("qualified_at"),
+    // The captain's answer when the team is short-handed at check-in.
+    checkInDecision: text("check_in_decision").$type<"play" | "withdraw">(),
     createdAt: tz("created_at").notNull().defaultNow(),
     updatedAt: tz("updated_at").notNull().defaultNow(),
   },

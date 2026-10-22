@@ -31,7 +31,7 @@ type PageData = Awaited<ReturnType<typeof getRegistrationPage>>;
 function RegistrationPage() {
   const { tournament, registration, isCaptain, members } = Route.useLoaderData();
   const free = tournament.entryFeeArs === 0;
-  const active = registration.status !== "withdrawn" && registration.status !== "dropped";
+  const active = registration.status !== "withdrawn" && registration.status !== "dropped" && registration.status !== "forfeited";
   const editable = active && (tournament.status === "registration_open" || tournament.status === "registration_closed");
   return (
     <main>

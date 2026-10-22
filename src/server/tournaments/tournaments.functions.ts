@@ -52,7 +52,7 @@ export const getRegisterPage = createServerFn({ method: "GET" })
 
     const registered = new Set(
       (await registrations.listRegistrations(db, tournament.id))
-        .filter((r) => r.status !== "withdrawn" && r.status !== "dropped")
+        .filter((r) => r.status !== "withdrawn" && r.status !== "dropped" && r.status !== "forfeited")
         .map((r) => r.team.id),
     );
     const captained = (await teams.listTeamsForUser(db, user.id)).filter((t) => t.role === "captain" && !registered.has(t.id));

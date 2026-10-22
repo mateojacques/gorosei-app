@@ -57,7 +57,7 @@ const GROUPS: { key: string; statuses: RegistrationStatus[] }[] = [
   { key: "confirmed", statuses: ["confirmed"] },
   { key: "waitlisted", statuses: ["waitlisted"] },
   { key: "pending", statuses: ["pending"] },
-  { key: "inactive", statuses: ["withdrawn", "dropped"] },
+  { key: "inactive", statuses: ["withdrawn", "dropped", "forfeited"] },
 ];
 
 export function AdminRegistrations({
@@ -96,7 +96,7 @@ function RegistrationBlock({ tournamentId, free, registration }: { tournamentId:
   const { run, error, pending } = useAdminAction();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [reference, setReference] = useState("");
-  const active = registration.status !== "withdrawn" && registration.status !== "dropped";
+  const active = registration.status !== "withdrawn" && registration.status !== "dropped" && registration.status !== "forfeited";
   const failedRules = [...new Set(registration.failures.map((f) => f.ruleId))];
 
   async function markPaid(event: FormEvent<HTMLFormElement>) {

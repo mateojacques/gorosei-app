@@ -112,3 +112,15 @@ export async function poolPlayer(
   if (!result.ok) throw new Error(`poolPlayer failed: ${result.reason}`);
   return id;
 }
+
+/**
+ * A confirmed team of five starters `${prefix}1..5` plus sub `${prefix}6`, registered through registerTeam.
+ * The tournament must be open for registration and free (entryFeeArs 0) so the roster confirms without payments.
+ */
+export async function confirmedTestTeam(tournamentId: string, prefix: string, rank: Rank | null = null) {
+  const ids: string[] = [];
+  for (let i = 1; i <= 6; i++) ids.push(await linkedPlayer(`${prefix}${i}`, rank));
+  const team = await createTestTeam(ids[0]!, ids.slice(1));
+  const registrationId = await createTestRegistration(tournamentId, team.id, { starters: ids.slice(0, 5), subs: [ids[5]!] });
+  return { ids, starters: ids.slice(0, 5), sub: ids[5]!, captain: ids[0]!, teamId: team.id, registrationId };
+}

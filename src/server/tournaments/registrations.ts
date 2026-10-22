@@ -68,7 +68,7 @@ export type RegistrationView = {
 
 /** Roster changes are allowed until check-in starts. */
 const EDITABLE_STATUSES: readonly TournamentStatus[] = ["registration_open", "registration_closed"];
-const INACTIVE_STATUSES: RegistrationStatus[] = ["withdrawn", "dropped"];
+const INACTIVE_STATUSES: RegistrationStatus[] = ["withdrawn", "dropped", "forfeited"];
 
 type TakenSnapshot = { riotAccountId: string; snapshot: PlayerSnapshot };
 
@@ -488,6 +488,7 @@ const STATUS_ORDER: Record<RegistrationStatus, number> = {
   pending: 2,
   withdrawn: 3,
   dropped: 3,
+  forfeited: 3,
 };
 
 type RegistrationRow = { registration: typeof registrations.$inferSelect; team: typeof teams.$inferSelect };

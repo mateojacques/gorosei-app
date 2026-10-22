@@ -72,7 +72,7 @@ async function fitFailures(db: Executor, context: RegistrationContext, candidate
 
 /** Why a registration can't take a pool player right now, or null. Shared by requests and invites. */
 async function checkTarget(db: Executor, context: RegistrationContext | null, userId: string): Promise<RequestRejection | null> {
-  if (!context || ["withdrawn", "dropped"].includes(context.registration.status)) return "team_not_registered";
+  if (!context || ["withdrawn", "dropped", "forfeited"].includes(context.registration.status)) return "team_not_registered";
   if (context.tournament.status !== "registration_open") return "closed";
   const [member] = await db
     .select({ userId: teamMembers.userId })
@@ -213,7 +213,7 @@ export async function respondToPoolRequest(
       and(
         eq(registrations.tournamentId, tournamentId),
         eq(registrations.teamId, team.id),
-        notInArray(registrations.status, ["withdrawn", "dropped"]),
+        notInArray(registrations.status, ["withdrawn", "dropped", "forfeited"]),
       ),
     );
   const [tournament] = await db.select().from(tournaments).where(eq(tournaments.id, tournamentId));

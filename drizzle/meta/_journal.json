@@ -71,6 +71,13 @@
       "when": 1792671078079,
       "tag": "0009_wakeful_amphibian",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792672948662,
+      "tag": "0010_purple_may_parker",
+      "breakpoints": true
     }
   ]
 }

@@ -57,7 +57,7 @@ async function placedTeam(db: Db, tournamentId: string, userId: string) {
         eq(registrationPlayers.tournamentId, tournamentId),
         eq(registrationPlayers.userId, userId),
         eq(registrationPlayers.active, true),
-        notInArray(registrations.status, ["withdrawn", "dropped"]),
+        notInArray(registrations.status, ["withdrawn", "dropped", "forfeited"]),
       ),
     );
   if (!row) return null;
