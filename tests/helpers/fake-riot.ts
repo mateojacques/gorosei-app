@@ -16,6 +16,7 @@ export class FakeRiotClient implements RiotClient {
   private accounts = new Map<string, FakeAccount>();
   private unavailablePuuids = new Set<string>();
   private matchesById = new Map<string, RiotMatch>();
+  private accessTokens = new Map<string, string>();
   readonly matchCalls: string[] = [];
 
   addMatch(match: RiotMatch): this {
@@ -25,6 +26,13 @@ export class FakeRiotClient implements RiotClient {
 
   addAccount(account: Partial<FakeAccount> & Pick<FakeAccount, "puuid" | "gameName" | "tagLine">): this {
     this.accounts.set(account.puuid, { profileIconId: 0, summonerLevel: 30, rank: null, ...account });
+    return this;
+  }
+
+  /** An RSO access token that resolves to the account (which must also be added). */
+  addAccessToken(token: string, account: Partial<FakeAccount> & Pick<FakeAccount, "puuid" | "gameName" | "tagLine">): this {
+    if (!this.accounts.has(account.puuid)) this.addAccount(account);
+    this.accessTokens.set(token, account.puuid);
     return this;
   }
 
@@ -57,6 +65,12 @@ export class FakeRiotClient implements RiotClient {
 
   async getAccountByPuuid(puuid: string) {
     return this.lookup(puuid, (a) => ({ puuid: a.puuid, gameName: a.gameName, tagLine: a.tagLine }));
+  }
+
+  async getAccountByAccessToken(token: string) {
+    const puuid = this.accessTokens.get(token);
+    if (!puuid) return unavailable;
+    return this.getAccountByPuuid(puuid);
   }
 
   async getSummonerByPuuid(puuid: string) {

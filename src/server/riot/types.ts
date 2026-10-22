@@ -26,6 +26,7 @@ export type RiotMatch = {
 export interface RiotClient {
   getAccountByRiotId(gameName: string, tagLine: string): Promise<RiotResult<RiotAccount>>;
   getAccountByPuuid(puuid: string): Promise<RiotResult<RiotAccount>>;
+  getAccountByAccessToken(accessToken: string): Promise<RiotResult<RiotAccount>>;
   getSummonerByPuuid(puuid: string): Promise<RiotResult<RiotSummoner>>;
   getSoloRankByPuuid(puuid: string): Promise<RiotResult<RiotSoloRank | null>>;
   getMatch(matchId: string): Promise<RiotResult<RiotMatch>>;

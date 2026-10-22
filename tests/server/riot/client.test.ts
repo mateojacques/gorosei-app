@@ -178,3 +178,12 @@ test("getMatch maps 404 to not_found", async () => {
   const riot = createRiotClient({ apiKey: "k", fetch: stub.fetch, sleep: noSleep });
   expect(await riot.getMatch("LA2_1")).toEqual({ ok: false, error: "not_found" });
 });
+
+test("getAccountByAccessToken uses the player's token, not the API key", async () => {
+  const stub = stubFetch([{ status: 200, body: account }]);
+  const riot = createRiotClient({ apiKey: "key-1", fetch: stub.fetch, sleep: noSleep });
+  expect(await riot.getAccountByAccessToken("tok")).toEqual({ ok: true, data: account });
+  expect(stub.calls[0]!.url).toBe("https://americas.api.riotgames.com/riot/account/v1/accounts/me");
+  expect(stub.calls[0]!.headers.get("Authorization")).toBe("Bearer tok");
+  expect(stub.calls[0]!.headers.get("X-Riot-Token")).toBeNull();
+});

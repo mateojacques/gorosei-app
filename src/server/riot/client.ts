@@ -1,10 +1,10 @@
 import { isDivision, isTier } from "../../shared/rank";
+import { type RiotHttpOptions, riotRequest } from "./http";
 import type { RiotAccount, RiotClient, RiotMatch, RiotResult, RiotSoloRank } from "./types";
 
 const REGIONAL_HOST = "https://americas.api.riotgames.com";
 const PLATFORM_HOST = "https://la2.api.riotgames.com";
 const SOLO_QUEUE = "RANKED_SOLO_5x5";
-const BASE_BACKOFF_MS = 250;
 
 type LeagueEntry = {
   queueType: string;
@@ -34,60 +34,31 @@ type MatchPayload = {
 
 const teamId = (id: number): 100 | 200 => (id === 200 ? 200 : 100);
 
-export type RiotClientOptions = {
-  apiKey: string;
-  fetch?: typeof fetch;
-  maxRetries?: number;
-  sleep?: (ms: number) => Promise<void>;
-};
+export type RiotClientOptions = RiotHttpOptions & { apiKey: string };
 
 export function createRiotClient(opts: RiotClientOptions): RiotClient {
-  const doFetch = opts.fetch ?? fetch;
-  const maxRetries = opts.maxRetries ?? 3;
-  const sleep = opts.sleep ?? ((ms: number) => Bun.sleep(ms));
+  const get = <T>(url: string) => riotRequest<T>(opts, "GET", url, { headers: { "X-Riot-Token": opts.apiKey } });
 
-  async function get<T>(url: string): Promise<RiotResult<T>> {
-    let failure: "rate_limited" | "unavailable" = "unavailable";
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      let res: Response;
-      try {
-        res = await doFetch(url, { headers: { "X-Riot-Token": opts.apiKey } });
-      } catch {
-        failure = "unavailable";
-        if (attempt < maxRetries) await sleep(BASE_BACKOFF_MS * 2 ** attempt);
-        continue;
-      }
-      if (res.ok) return { ok: true, data: (await res.json()) as T };
-      if (res.status === 404) return { ok: false, error: "not_found" };
-      if (res.status === 429) {
-        failure = "rate_limited";
-        const retryAfterSeconds = Number(res.headers.get("Retry-After") ?? 1);
-        if (attempt < maxRetries) await sleep(retryAfterSeconds * 1000);
-        continue;
-      }
-      if (res.status >= 500) {
-        failure = "unavailable";
-        if (attempt < maxRetries) await sleep(BASE_BACKOFF_MS * 2 ** attempt);
-        continue;
-      }
-      // Other 4xx (bad key, forbidden) are not retryable.
-      return { ok: false, error: "unavailable" };
-    }
-    return { ok: false, error: failure };
-  }
-
-  async function getAccount(path: string): Promise<RiotResult<RiotAccount>> {
-    const result = await get<RiotAccount>(`${REGIONAL_HOST}/riot/account/v1/accounts/${path}`);
+  const toAccount = (result: RiotResult<RiotAccount>): RiotResult<RiotAccount> => {
     if (!result.ok) return result;
     const { puuid, gameName, tagLine } = result.data;
     return { ok: true, data: { puuid, gameName, tagLine } };
-  }
+  };
+  const getAccount = async (path: string) => toAccount(await get<RiotAccount>(`${REGIONAL_HOST}/riot/account/v1/accounts/${path}`));
 
   return {
     getAccountByRiotId: (gameName, tagLine) =>
       getAccount(`by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`),
 
     getAccountByPuuid: (puuid) => getAccount(`by-puuid/${encodeURIComponent(puuid)}`),
+
+    // Riot Sign On: the account behind a player access token; the API key is not sent.
+    getAccountByAccessToken: async (accessToken) =>
+      toAccount(
+        await riotRequest<RiotAccount>(opts, "GET", `${REGIONAL_HOST}/riot/account/v1/accounts/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ),
 
     getSummonerByPuuid: async (puuid) => {
       const result = await get<{ profileIconId: number; summonerLevel: number }>(
