@@ -168,6 +168,9 @@ export async function getMatchView(
   };
 }
 
+/** A match view as the match-day components read it: the stats are not part of it. */
+export type MatchCore = Omit<MatchView, "stats">;
+
 export type MatchSummary = Pick<MatchView, "id" | "phase" | "round" | "number" | "bestOf" | "status" | "teams" | "score" | "winnerRegistrationId">;
 
 export async function listMatches(db: Db, tournamentId: string): Promise<MatchSummary[]> {

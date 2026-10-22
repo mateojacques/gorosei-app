@@ -70,3 +70,22 @@ test("no page for a match without teams, a draft tournament or a bad id", async 
   await testDb.update(tournaments).set({ status: "draft" }).where(eq(tournaments.id, s.tournament.id));
   expect(await loadMatchPage(testDb, m.id, { userId: "mod", role: "moderator" }, now)).toBeNull();
 });
+
+test("the public match page never carries Riot PUUIDs", async () => {
+  const { m, captain1 } = await busyMatch();
+  const stats = [
+    {
+      matchId: "LA2_1",
+      durationSeconds: 1800,
+      winningTeamId: 100,
+      teams: [],
+      players: [{ puuid: "secret-puuid-1", teamId: 100, championName: "Ahri", kills: 1, deaths: 0, assists: 2, role: "MIDDLE", riotId: "Uno#LAS" }],
+    },
+  ];
+  await testDb.update(matches).set({ stats }).where(eq(matches.id, m.id));
+  for (const viewer of [null, { userId: captain1, role: "player" as const }]) {
+    const page = (await loadMatchPage(testDb, m.id, viewer, now))!;
+    expect(page.match.stats![0]!.players[0]!.riotId).toBe("Uno#LAS");
+    expect(JSON.stringify(page)).not.toContain("secret-puuid-1");
+  }
+});

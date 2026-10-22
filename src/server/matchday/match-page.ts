@@ -37,8 +37,10 @@ export async function loadMatchPage(db: Db, matchId: string, viewer: Viewer | nu
     }),
   );
   const { status: _status, ...tournamentInfo } = tournament;
+  // PUUIDs are stored for Riot lookups but are not public (see the privacy page); players show by Riot ID.
+  const stats = match.stats?.map((game) => ({ ...game, players: game.players.map(({ puuid: _puuid, ...player }) => player) })) ?? null;
   return {
-    match,
+    match: { ...match, stats },
     tournament: tournamentInfo,
     messages,
     captainSide: captained[0] ? (0 as const) : captained[1] ? (1 as const) : null,

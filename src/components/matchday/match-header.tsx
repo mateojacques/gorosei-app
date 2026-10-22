@@ -1,10 +1,10 @@
 import { t } from "@/shared/i18n";
-import type { MatchView } from "../../server/bracket/bracket";
+import type { MatchCore, MatchView } from "../../server/bracket/bracket";
 
 const teamName = (team: MatchView["teams"][number]) => team?.name ?? t("matchday.tbd");
 
 /** The scoreboard line of a match: teams, score, phase and state. The status is plain text; red is for the one action. */
-export function MatchHeader({ match, tournament }: { match: MatchView; tournament: { title: string; edition: number } }) {
+export function MatchHeader({ match, tournament }: { match: MatchCore; tournament: { title: string; edition: number } }) {
   const [a, b] = match.teams;
   const done = match.status === "completed";
   const winner = match.teams.find((team) => team?.registrationId === match.winnerRegistrationId);

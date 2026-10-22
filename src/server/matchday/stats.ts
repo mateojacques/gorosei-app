@@ -10,6 +10,8 @@ import type { RiotClient, RiotMatch } from "../riot/types";
 export type StatsRejection = "not_found" | "forbidden" | "invalid_id" | "riot_unavailable" | "not_this_match";
 
 export type MatchStats = Omit<RiotMatch, "players"> & { players: (RiotMatch["players"][number] & { riotId: string | null })[] };
+/** Stats as pages show them: no PUUIDs, players by Riot ID. */
+export type PublicMatchStats = Omit<MatchStats, "players"> & { players: Omit<MatchStats["players"][number], "puuid">[] };
 
 const MAX_MATCH_IDS = 3;
 const MIN_PER_ROSTER = 3;

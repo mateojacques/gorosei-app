@@ -1,9 +1,9 @@
 import { t } from "@/shared/i18n";
-import type { MatchStats } from "../../server/matchday/stats";
+import type { PublicMatchStats } from "../../server/matchday/stats";
 import { Th } from "../team/team-ui";
 
 /** Picks, bans and KDA pulled once from Riot match data. */
-export function MatchStatsTable({ stats }: { stats: MatchStats[] }) {
+export function MatchStatsTable({ stats }: { stats: PublicMatchStats[] }) {
   return (
     <section aria-labelledby="stats-h" className="flex flex-col gap-6">
       <h2 id="stats-h" className="font-display text-2xl font-extrabold uppercase">
@@ -24,7 +24,7 @@ export function MatchStatsTable({ stats }: { stats: MatchStats[] }) {
             </thead>
             <tbody>
               {game.players.map((p) => (
-                <tr key={p.puuid} className="border-b border-line">
+                <tr key={`${p.teamId}-${p.championName}-${p.riotId ?? ""}`} className="border-b border-line">
                   <td className="py-2 pr-3 [overflow-wrap:anywhere]">{p.riotId ?? "—"}</td>
                   <td className="py-2 pr-3">{p.championName}</td>
                   <td className="py-2 tabular-nums">

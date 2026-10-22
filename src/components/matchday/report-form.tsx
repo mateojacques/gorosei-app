@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { t } from "@/shared/i18n";
-import type { MatchView } from "../../server/bracket/bracket";
+import type { MatchCore, MatchView } from "../../server/bracket/bracket";
 import { attachRiotMatchIdsFn, reportResultFn } from "../../server/matchday/matchday.functions";
 import { Field, FormAlert } from "../site/form";
 import { Button } from "../ui/button";
@@ -8,14 +8,14 @@ import { Input } from "../ui/input";
 import { useMatchAction } from "./action";
 
 /** What both captains have reported, in words: waiting, agreeing or in dispute. */
-export function reportSummary(match: MatchView): string | null {
+export function reportSummary(match: MatchCore): string | null {
   if (match.status === "completed" || match.status === "waiting") return null;
   if (match.status === "disputed") return t("matchday.report.disputed");
   if (match.status === "reported") return t("matchday.report.agree");
   return match.reports.length === 1 ? t("matchday.report.waitingOther") : null;
 }
 
-export function ReportForm({ match, side }: { match: MatchView; side: 0 | 1 }) {
+export function ReportForm({ match, side }: { match: MatchCore; side: 0 | 1 }) {
   const id = useId();
   const mine = match.reports.find((r) => r.registrationId === match.teams[side]?.registrationId);
   const own = mine ? (side === 0 ? mine.score1 : mine.score2) : 0;
@@ -82,7 +82,7 @@ export function ReportForm({ match, side }: { match: MatchView; side: 0 | 1 }) {
 }
 
 /** The captains' reports side by side, for participants and moderators. */
-export function ReportList({ match }: { match: MatchView }) {
+export function ReportList({ match }: { match: MatchCore }) {
   if (match.reports.length === 0) return null;
   return (
     <ul className="flex flex-col gap-1 text-lg">
