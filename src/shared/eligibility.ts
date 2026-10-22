@@ -176,6 +176,12 @@ export function evaluateEligibility(
     .flatMap((rule) => [...playerFailures(rule, roster), ...teamFailures(rule, team)]);
 }
 
+/** The rules that can be judged for one player alone; team rules wait for a roster. */
+export function evaluatePlayerRules(rules: EligibilityRule[], player: PlayerSnapshot): EligibilityFailure[] {
+  const entry: RosterEntry = { ...player, isSub: false };
+  return rules.flatMap((rule) => playerFailures(rule, [entry]));
+}
+
 export function describeRule(rule: EligibilityRule): string {
   switch (rule.type) {
     case "player_rank_range": {

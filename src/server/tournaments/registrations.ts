@@ -58,7 +58,7 @@ const INACTIVE_STATUSES: RegistrationStatus[] = ["withdrawn", "dropped"];
 
 type TakenSnapshot = { riotAccountId: string; snapshot: PlayerSnapshot };
 
-async function snapshotWithAccount(
+export async function snapshotWithAccount(
   deps: RegistrationDeps,
   userId: string,
   rankSource: RankSource,

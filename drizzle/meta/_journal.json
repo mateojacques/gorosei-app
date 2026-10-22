@@ -50,6 +50,13 @@
       "when": 1792625315819,
       "tag": "0006_fancy_starbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792670466889,
+      "tag": "0007_nice_stephen_strange",
+      "breakpoints": true
     }
   ]
 }

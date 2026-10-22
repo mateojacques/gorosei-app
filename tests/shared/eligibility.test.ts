@@ -3,6 +3,7 @@ import {
   describeRule,
   eligibilityRulesSchema,
   evaluateEligibility,
+  evaluatePlayerRules,
   formatFailure,
   type EligibilityRule,
   type RosterEntry,
@@ -186,4 +187,22 @@ test("schema rejects duplicate rule ids and unknown types", () => {
 
 test("describeRule", () => {
   expect(describeRule(maxDiamondIV)).toBe("Rango máximo por jugador: Diamante IV");
+});
+
+test("evaluatePlayerRules ignores team rules", () => {
+  const rules: EligibilityRule[] = [
+    { id: "avg", type: "team_average_max", max: { tier: "GOLD", division: "IV" } },
+    { id: "budget", type: "point_budget", points: { MASTER: 50 }, unrankedPoints: 0, maxTotal: 10 },
+  ];
+  expect(evaluatePlayerRules(rules, player("m", "MASTER I"))).toEqual([]);
+});
+
+test("evaluatePlayerRules applies player_rank_range and account_minimums", () => {
+  const failures = evaluatePlayerRules([maxDiamondIV], player("m", "MASTER I"));
+  expect(failures.map((f) => f.messageKey)).toEqual(["eligibility.fail.rank_above"]);
+  expect(evaluatePlayerRules([maxDiamondIV], player("d", "DIAMOND IV"))).toEqual([]);
+  const minimums: EligibilityRule = { id: "min", type: "account_minimums", minLevel: 30 };
+  expect(evaluatePlayerRules([minimums], player("low", "GOLD I", { level: 10 })).map((f) => f.messageKey)).toEqual([
+    "eligibility.fail.min_level",
+  ]);
 });

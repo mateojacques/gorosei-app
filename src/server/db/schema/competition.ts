@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { boolean, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import type { Role } from "../../../shared/pool";
 import type { EligibilityRule, PlayerSnapshot } from "../../../shared/eligibility";
 import type { RANK_SOURCES, RegistrationStatus, TournamentStatus } from "../../../shared/tournament";
 import { user } from "./auth";
@@ -202,4 +203,27 @@ export const entryCredits = pgTable(
   },
   // At most one credit per player per source tournament; null sources (manual credits) never conflict.
   (t) => [uniqueIndex("entry_credits_user_source_idx").on(t.userId, t.sourceTournamentId)],
+);
+
+export const poolEntries = pgTable(
+  "pool_entries",
+  {
+    tournamentId: uuid("tournament_id")
+      .notNull()
+      .references(() => tournaments.id),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    riotAccountId: uuid("riot_account_id")
+      .notNull()
+      .references(() => riotAccounts.id),
+    // Preference order, first is most wanted.
+    roles: jsonb("roles").$type<Role[]>().notNull(),
+    autoPlace: boolean("auto_place").notNull().default(true),
+    snapshot: jsonb("snapshot").$type<PlayerSnapshot>().notNull(),
+    // A player's "placed" state is never stored: it follows from being on an active roster.
+    active: boolean("active").notNull().default(true),
+    joinedAt: tz("joined_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.tournamentId, t.userId] })],
 );

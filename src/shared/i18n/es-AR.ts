@@ -448,4 +448,11 @@ export const esAR = {
   "registration.withdraw.warning": "¿Retirar al equipo del torneo? Los jugadores pueden sumarse a otro equipo.",
   "registration.withdraw.warningConfirmed":
     "¿Retirar al equipo del torneo? El equipo está confirmado: si se retira, pierde los pagos y no recibe créditos.",
+  "pool.error.registration_closed": "La inscripción a este torneo no está abierta.",
+  "pool.error.riot_required": "Necesitás vincular tu cuenta de Riot para entrar al pool.",
+  "pool.error.not_paid": "Tenés que pagar la inscripción individual antes de entrar al pool.",
+  "pool.error.already_on_roster": "Ya estás en el roster de un equipo en este torneo.",
+  "pool.error.ineligible": "No cumplís las reglas de elegibilidad del torneo.",
+  "pool.error.invalid_roles": "Elegí entre 1 y 5 roles, sin repetir.",
+  "pool.error.not_in_pool": "No estás en el pool de agentes libres.",
 } as const;

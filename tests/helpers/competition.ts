@@ -2,7 +2,9 @@ import { createTournament } from "../../src/server/tournaments/tournaments";
 import { createTeam } from "../../src/server/teams/teams";
 import { registerTeam } from "../../src/server/tournaments/registrations";
 import type { RosterInput } from "../../src/server/tournaments/registrations";
-import { rankSnapshots, riotAccounts, teamMembers, teams, tournaments } from "../../src/server/db/schema";
+import { enterPool } from "../../src/server/pool/pool";
+import type { Role } from "../../src/shared/pool";
+import { entryPayments, rankSnapshots, riotAccounts, teamMembers, teams, tournaments } from "../../src/server/db/schema";
 import type { Rank } from "../../src/shared/rank";
 import { eq } from "drizzle-orm";
 import type { TournamentInput, TournamentStatus } from "../../src/shared/tournament";
@@ -86,4 +88,27 @@ export async function createTestRegistration(tournamentId: string, teamId: strin
   const result = await registerTeam({ db: testDb, riot: new FakeRiotClient() }, team.captainUserId, tournamentId, teamId, roster);
   if (!result.ok) throw new Error(`createTestRegistration failed: ${result.reason}`);
   return result.registrationId;
+}
+
+/** Inserts a live entry payment for the player, as an admin marking it paid would. */
+export async function payFor(tournamentId: string, userId: string): Promise<void> {
+  await testDb.insert(entryPayments).values({ tournamentId, userId, source: "payment", reference: "test", recordedBy: userId });
+}
+
+/** Links a player, pays their entry and puts them in the tournament's pool. */
+export async function poolPlayer(
+  tournament: { id: string },
+  id: string,
+  rank: Rank | null = null,
+  roles: Role[] = ["mid"],
+  opts: { autoPlace?: boolean } = {},
+): Promise<string> {
+  await linkedPlayer(id, rank);
+  await payFor(tournament.id, id);
+  const result = await enterPool({ db: testDb, riot: new FakeRiotClient() }, id, tournament.id, {
+    roles,
+    autoPlace: opts.autoPlace ?? true,
+  });
+  if (!result.ok) throw new Error(`poolPlayer failed: ${result.reason}`);
+  return id;
 }
