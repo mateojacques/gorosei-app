@@ -1,9 +1,11 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { type CheckInOutcome, type ShortHandedDecision, checkInOutcome, checkInWindow } from "../../shared/check-in";
 import { writeAudit } from "../audit";
 import type { Db, Executor } from "../db/client";
-import { checkIns, registrationPlayers, registrations, teams, tournaments } from "../db/schema";
+import { checkIns, entryPayments, registrationPlayers, registrations, teams, tournaments } from "../db/schema";
+import { startBracket } from "../bracket/bracket";
 import { lockTournament } from "../tournaments/confirmations";
+import { cancelLockedTournament } from "../tournaments/credits";
 
 export type CheckInRejection = "not_open" | "not_on_roster" | "registration_inactive" | "not_captain" | "invalid_state";
 type Result = { ok: true } | { ok: false; reason: CheckInRejection };
@@ -137,4 +139,105 @@ export async function getCheckInView(db: Db, registrationId: string, now: Date):
     decision,
     outcome: checkInOutcome(checkedInCount, decision),
   };
+}
+
+export async function openCheckIn(
+  db: Db,
+  tournamentId: string,
+  now: Date,
+  actorUserId: string | null,
+  opts: { force?: boolean } = {},
+): Promise<{ ok: true } | { ok: false; reason: "invalid_state" | "too_early" }> {
+  return db.transaction(async (tx) => {
+    const tournament = await lockTournament(tx, tournamentId);
+    if (tournament?.status !== "registration_closed") return { ok: false, reason: "invalid_state" } as const;
+    if (!opts.force && now < checkInWindow(tournament.startsAt).opensAt) return { ok: false, reason: "too_early" } as const;
+    await tx.update(tournaments).set({ status: "check_in", updatedAt: now }).where(eq(tournaments.id, tournamentId));
+    await writeAudit(tx, {
+      actorUserId,
+      action: "tournament.check_in_opened",
+      entityType: "tournament",
+      entityId: tournamentId,
+      data: { forced: opts.force === true },
+    });
+    return { ok: true } as const;
+  });
+}
+
+export async function closeCheckIn(
+  db: Db,
+  tournamentId: string,
+  now: Date,
+  actorUserId: string | null,
+  opts: { force?: boolean } = {},
+): Promise<
+  | { ok: true; outcome: "live" | "cancelled"; forfeited: number; teams: number }
+  | { ok: false; reason: "invalid_state" | "too_early" }
+> {
+  return db.transaction(async (tx) => {
+    const tournament = await lockTournament(tx, tournamentId);
+    if (tournament?.status !== "check_in") return { ok: false, reason: "invalid_state" } as const;
+    if (!opts.force && now < checkInWindow(tournament.startsAt).closesAt) return { ok: false, reason: "too_early" } as const;
+
+    const regs = await tx
+      .select()
+      .from(registrations)
+      .where(and(eq(registrations.tournamentId, tournamentId), eq(registrations.status, "confirmed")))
+      .for("update");
+    const done = await tx.select().from(checkIns).where(eq(checkIns.tournamentId, tournamentId));
+    const survivors: string[] = [];
+    let forfeited = 0;
+    for (const registration of regs) {
+      const count = done.filter((c) => c.registrationId === registration.id).length;
+      const outcome = checkInOutcome(count, registration.checkInDecision);
+      if (outcome === "in" || outcome === "short_handed") {
+        survivors.push(registration.id);
+        continue;
+      }
+      forfeited++;
+      const roster = await tx
+        .select({ userId: registrationPlayers.userId })
+        .from(registrationPlayers)
+        .where(eq(registrationPlayers.registrationId, registration.id));
+      await tx.update(registrations).set({ status: "forfeited", qualifiedAt: null, updatedAt: now }).where(eq(registrations.id, registration.id));
+      await tx.update(registrationPlayers).set({ active: false }).where(eq(registrationPlayers.registrationId, registration.id));
+      if (roster.length > 0) {
+        await tx
+          .update(entryPayments)
+          .set({ forfeited: true })
+          .where(
+            and(
+              eq(entryPayments.tournamentId, tournamentId),
+              eq(entryPayments.forfeited, false),
+              inArray(
+                entryPayments.userId,
+                roster.map((r) => r.userId),
+              ),
+            ),
+          );
+      }
+      await writeAudit(tx, {
+        actorUserId,
+        action: "registration.forfeited",
+        entityType: "registration",
+        entityId: registration.id,
+        data: { tournamentId, reason: outcome, checkedIn: count },
+      });
+    }
+
+    if (survivors.length < 2) {
+      await cancelLockedTournament(tx, tournament, actorUserId, "no_field");
+      return { ok: true, outcome: "cancelled", forfeited, teams: regs.length } as const;
+    }
+    await startBracket(tx, tournament, survivors, now);
+    await tx.update(tournaments).set({ status: "live", updatedAt: now }).where(eq(tournaments.id, tournamentId));
+    await writeAudit(tx, {
+      actorUserId,
+      action: "tournament.live",
+      entityType: "tournament",
+      entityId: tournamentId,
+      data: { teams: survivors.length, forfeited },
+    });
+    return { ok: true, outcome: "live", forfeited, teams: regs.length } as const;
+  });
 }

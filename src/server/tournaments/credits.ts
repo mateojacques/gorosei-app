@@ -4,6 +4,7 @@ import { writeAudit } from "../audit";
 import type { Db, Executor } from "../db/client";
 import { entryCredits, entryPayments, poolEntries, registrationPlayers, registrations, tournaments } from "../db/schema";
 import { autoPlacePool } from "../pool/auto-place";
+import type { Tournament } from "./tournaments";
 import { acceptsPaymentFor, lockTournament, recomputeConfirmations, takesPayments } from "./confirmations";
 
 export type EntryCredit = typeof entryCredits.$inferSelect;
@@ -109,32 +110,42 @@ export async function closeRegistration(
   });
 }
 
+/** Cancels inside a transaction that already holds the tournament lock. */
+export async function cancelLockedTournament(
+  tx: Executor,
+  tournament: Tournament,
+  adminId: string | null,
+  reason: string,
+): Promise<{ ok: true; credited: number } | { ok: false; reason: "invalid_state" }> {
+  if (tournament.status === "finished" || tournament.status === "cancelled") return { ok: false, reason: "invalid_state" };
+  const tournamentId = tournament.id;
+  let credited = 0;
+  // Players credited at close keep that credit; everyone else who paid gets one now.
+  for (const { userId } of await livePayments(tx, tournamentId)) {
+    const input = { userId, sourceTournamentId: tournamentId, reason: "cancelled" as const, note: reason, createdBy: adminId };
+    if (await grantCredit(tx, input)) credited++;
+  }
+  await tx.update(tournaments).set({ status: "cancelled", updatedAt: new Date() }).where(eq(tournaments.id, tournamentId));
+  await writeAudit(tx, {
+    actorUserId: adminId,
+    action: "tournament.cancelled",
+    entityType: "tournament",
+    entityId: tournamentId,
+    data: { from: tournament.status, reason, credited },
+  });
+  return { ok: true, credited };
+}
+
 export async function cancelTournament(
   db: Db,
-  adminId: string,
+  adminId: string | null,
   tournamentId: string,
   reason: string,
 ): Promise<{ ok: true; credited: number } | { ok: false; reason: "invalid_state" }> {
   return db.transaction(async (tx) => {
     const tournament = await lockTournament(tx, tournamentId);
-    if (!tournament || tournament.status === "finished" || tournament.status === "cancelled") {
-      return { ok: false, reason: "invalid_state" } as const;
-    }
-    let credited = 0;
-    // Players credited at close keep that credit; everyone else who paid gets one now.
-    for (const { userId } of await livePayments(tx, tournamentId)) {
-      const input = { userId, sourceTournamentId: tournamentId, reason: "cancelled" as const, note: reason, createdBy: adminId };
-      if (await grantCredit(tx, input)) credited++;
-    }
-    await tx.update(tournaments).set({ status: "cancelled", updatedAt: new Date() }).where(eq(tournaments.id, tournamentId));
-    await writeAudit(tx, {
-      actorUserId: adminId,
-      action: "tournament.cancelled",
-      entityType: "tournament",
-      entityId: tournamentId,
-      data: { from: tournament.status, reason, credited },
-    });
-    return { ok: true, credited } as const;
+    if (!tournament) return { ok: false, reason: "invalid_state" } as const;
+    return cancelLockedTournament(tx, tournament, adminId, reason);
   });
 }
 

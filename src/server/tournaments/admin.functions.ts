@@ -106,6 +106,22 @@ export const closeRegistrationFn = createServerFn({ method: "POST" })
     return credits.closeRegistration(db, data.id, new Date(), admin.id);
   });
 
+export const openCheckInFn = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.uuid(), force: z.boolean().default(false) }))
+  .handler(async ({ data }) => {
+    const admin = await requireAdmin();
+    const [{ db }, checkIn] = await Promise.all([import("../db/client"), import("../matchday/check-in")]);
+    return checkIn.openCheckIn(db, data.id, new Date(), admin.id, { force: data.force });
+  });
+
+export const closeCheckInFn = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.uuid(), force: z.boolean().default(false) }))
+  .handler(async ({ data }) => {
+    const admin = await requireAdmin();
+    const [{ db }, checkIn] = await Promise.all([import("../db/client"), import("../matchday/check-in")]);
+    return checkIn.closeCheckIn(db, data.id, new Date(), admin.id, { force: data.force });
+  });
+
 export const cancelTournamentFn = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.uuid(), reason: z.string().trim().min(1).max(500) }))
   .handler(async ({ data }) => {

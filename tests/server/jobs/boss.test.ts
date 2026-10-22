@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { PgBoss } from "pg-boss";
 import { registerJobs } from "../../../src/server/jobs/boss";
 
-test("registerJobs schedules rank polling every 6 hours and registration close every minute", async () => {
+test("registerJobs schedules rank polling every 6 hours and registration close and tournament advance every minute", async () => {
   const calls: string[] = [];
   const boss = {
     createQueue: async (name: string) => void calls.push(`createQueue ${name}`),
@@ -19,5 +19,8 @@ test("registerJobs schedules rank polling every 6 hours and registration close e
     "createQueue close-registrations",
     "schedule close-registrations * * * * *",
     "work close-registrations",
+    "createQueue advance-tournaments",
+    "schedule advance-tournaments * * * * *",
+    "work advance-tournaments",
   ]);
 });

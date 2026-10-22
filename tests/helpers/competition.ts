@@ -4,7 +4,7 @@ import { registerTeam } from "../../src/server/tournaments/registrations";
 import type { RosterInput } from "../../src/server/tournaments/registrations";
 import { enterPool } from "../../src/server/pool/pool";
 import type { Role } from "../../src/shared/pool";
-import { entryPayments, rankSnapshots, riotAccounts, teamMembers, teams, tournaments } from "../../src/server/db/schema";
+import { checkIns, entryPayments, rankSnapshots, registrations, riotAccounts, teamMembers, teams, tournaments } from "../../src/server/db/schema";
 import type { Rank } from "../../src/shared/rank";
 import { eq } from "drizzle-orm";
 import type { TournamentInput, TournamentStatus } from "../../src/shared/tournament";
@@ -123,4 +123,21 @@ export async function confirmedTestTeam(tournamentId: string, prefix: string, ra
   const team = await createTestTeam(ids[0]!, ids.slice(1));
   const registrationId = await createTestRegistration(tournamentId, team.id, { starters: ids.slice(0, 5), subs: [ids[5]!] });
   return { ids, starters: ids.slice(0, 5), sub: ids[5]!, captain: ids[0]!, teamId: team.id, registrationId };
+}
+
+/** A confirmed team (see confirmedTestTeam) with its first `checkedIn` players checked in. */
+export async function checkedInTestTeam(
+  tournament: { id: string },
+  prefix: string,
+  checkedIn: number,
+  opts: { rank?: Rank | null; decision?: "play" | "withdraw" } = {},
+) {
+  const team = await confirmedTestTeam(tournament.id, prefix, opts.rank ?? null);
+  if (checkedIn > 0) {
+    await testDb
+      .insert(checkIns)
+      .values(team.ids.slice(0, checkedIn).map((userId) => ({ registrationId: team.registrationId, userId, tournamentId: tournament.id })));
+  }
+  if (opts.decision) await testDb.update(registrations).set({ checkInDecision: opts.decision }).where(eq(registrations.id, team.registrationId));
+  return team;
 }

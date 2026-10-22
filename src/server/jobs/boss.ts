@@ -2,12 +2,14 @@ import { PgBoss } from "pg-boss";
 import { db } from "../db/client";
 import { env } from "../env";
 import { riot } from "../riot";
+import { advanceTournaments } from "./advance-tournaments";
 import { closeDueRegistrations } from "./close-registrations";
 import { pollAllRanks } from "./poll-ranks";
 
 const POLL_RANKS = "poll-ranks";
 const EVERY_SIX_HOURS = "0 */6 * * *";
 const CLOSE_REGISTRATIONS = "close-registrations";
+const ADVANCE_TOURNAMENTS = "advance-tournaments";
 const EVERY_MINUTE = "* * * * *";
 
 export async function registerJobs(boss: PgBoss): Promise<void> {
@@ -22,6 +24,12 @@ export async function registerJobs(boss: PgBoss): Promise<void> {
   await boss.work(CLOSE_REGISTRATIONS, async () => {
     const result = await closeDueRegistrations(db, new Date());
     console.info(`[jobs] ${CLOSE_REGISTRATIONS}: closed ${result.closed}`);
+  });
+  await boss.createQueue(ADVANCE_TOURNAMENTS);
+  await boss.schedule(ADVANCE_TOURNAMENTS, EVERY_MINUTE);
+  await boss.work(ADVANCE_TOURNAMENTS, async () => {
+    const result = await advanceTournaments(db, new Date());
+    console.info(`[jobs] ${ADVANCE_TOURNAMENTS}: opened ${result.opened}, closed ${result.closed}`);
   });
 }
 
