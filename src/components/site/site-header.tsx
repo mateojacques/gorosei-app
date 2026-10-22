@@ -14,7 +14,12 @@ export function SiteHeader({ viewer }: { viewer: ViewerState }) {
         >
           {t("app.name")}
         </Link>
-        <nav aria-label={t("site.nav")}>
+        <nav aria-label={t("site.nav")} className="flex items-center gap-1 sm:gap-3">
+          {viewer.signedIn && viewer.role === "admin" && (
+            <Link to="/admin/torneos" className={buttonVariants({ variant: "ghost", size: "sm", className: "px-2" })}>
+              {t("site.admin")}
+            </Link>
+          )}
           <AccountLink viewer={viewer} />
         </nav>
       </div>

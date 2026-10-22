@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as MisEquiposRouteImport } from './routes/mis-equipos'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
@@ -19,12 +20,20 @@ import { Route as EquiposSlugRouteImport } from './routes/equipos.$slug'
 import { Route as EquiposNuevoRouteImport } from './routes/equipos.nuevo'
 import { Route as JugadorRiotIdRouteImport } from './routes/jugador.$riotId'
 import { Route as TorneosSlugRouteImport } from './routes/torneos.$slug'
+import { Route as AdminTorneosIndexRouteImport } from './routes/admin.torneos.index'
+import { Route as AdminTorneosIdRouteImport } from './routes/admin.torneos.$id'
+import { Route as AdminTorneosNuevoRouteImport } from './routes/admin.torneos.nuevo'
 import { Route as TorneosSlugInscribirRouteImport } from './routes/torneos.$slug_.inscribir'
 import { Route as TorneosSlugEquiposTeamSlugRouteImport } from './routes/torneos.$slug_.equipos.$teamSlug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IngresarRoute = IngresarRouteImport.update({
@@ -72,6 +81,21 @@ const TorneosSlugRoute = TorneosSlugRouteImport.update({
   path: '/torneos/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminTorneosIndexRoute = AdminTorneosIndexRouteImport.update({
+  id: '/torneos/',
+  path: '/torneos/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTorneosIdRoute = AdminTorneosIdRouteImport.update({
+  id: '/torneos/$id',
+  path: '/torneos/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTorneosNuevoRoute = AdminTorneosNuevoRouteImport.update({
+  id: '/torneos/nuevo',
+  path: '/torneos/nuevo',
+  getParentRoute: () => AdminRoute,
+} as any)
 const TorneosSlugInscribirRoute = TorneosSlugInscribirRouteImport.update({
   id: '/torneos/$slug_/inscribir',
   path: '/torneos/$slug/inscribir',
@@ -86,6 +110,7 @@ const TorneosSlugEquiposTeamSlugRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/ingresar': typeof IngresarRoute
   '/mis-equipos': typeof MisEquiposRoute
   '/privacidad': typeof PrivacidadRoute
@@ -95,11 +120,15 @@ export interface FileRoutesByFullPath {
   '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
+  '/admin/torneos/$id': typeof AdminTorneosIdRoute
+  '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
   '/torneos/$slug/inscribir': typeof TorneosSlugInscribirRoute
+  '/admin/torneos/': typeof AdminTorneosIndexRoute
   '/torneos/$slug/equipos/$teamSlug': typeof TorneosSlugEquiposTeamSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/ingresar': typeof IngresarRoute
   '/mis-equipos': typeof MisEquiposRoute
   '/privacidad': typeof PrivacidadRoute
@@ -109,12 +138,16 @@ export interface FileRoutesByTo {
   '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
+  '/admin/torneos/$id': typeof AdminTorneosIdRoute
+  '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
   '/torneos/$slug/inscribir': typeof TorneosSlugInscribirRoute
+  '/admin/torneos': typeof AdminTorneosIndexRoute
   '/torneos/$slug/equipos/$teamSlug': typeof TorneosSlugEquiposTeamSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/ingresar': typeof IngresarRoute
   '/mis-equipos': typeof MisEquiposRoute
   '/privacidad': typeof PrivacidadRoute
@@ -124,13 +157,17 @@ export interface FileRoutesById {
   '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
+  '/admin/torneos/$id': typeof AdminTorneosIdRoute
+  '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
   '/torneos/$slug_/inscribir': typeof TorneosSlugInscribirRoute
+  '/admin/torneos/': typeof AdminTorneosIndexRoute
   '/torneos/$slug_/equipos/$teamSlug': typeof TorneosSlugEquiposTeamSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/ingresar'
     | '/mis-equipos'
     | '/privacidad'
@@ -140,11 +177,15 @@ export interface FileRouteTypes {
     | '/equipos/nuevo'
     | '/jugador/$riotId'
     | '/torneos/$slug'
+    | '/admin/torneos/$id'
+    | '/admin/torneos/nuevo'
     | '/torneos/$slug/inscribir'
+    | '/admin/torneos/'
     | '/torneos/$slug/equipos/$teamSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/ingresar'
     | '/mis-equipos'
     | '/privacidad'
@@ -154,11 +195,15 @@ export interface FileRouteTypes {
     | '/equipos/nuevo'
     | '/jugador/$riotId'
     | '/torneos/$slug'
+    | '/admin/torneos/$id'
+    | '/admin/torneos/nuevo'
     | '/torneos/$slug/inscribir'
+    | '/admin/torneos'
     | '/torneos/$slug/equipos/$teamSlug'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/ingresar'
     | '/mis-equipos'
     | '/privacidad'
@@ -168,12 +213,16 @@ export interface FileRouteTypes {
     | '/equipos/nuevo'
     | '/jugador/$riotId'
     | '/torneos/$slug'
+    | '/admin/torneos/$id'
+    | '/admin/torneos/nuevo'
     | '/torneos/$slug_/inscribir'
+    | '/admin/torneos/'
     | '/torneos/$slug_/equipos/$teamSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   IngresarRoute: typeof IngresarRoute
   MisEquiposRoute: typeof MisEquiposRoute
   PrivacidadRoute: typeof PrivacidadRoute
@@ -194,6 +243,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ingresar': {
@@ -259,6 +315,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TorneosSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/torneos/': {
+      id: '/admin/torneos/'
+      path: '/torneos'
+      fullPath: '/admin/torneos/'
+      preLoaderRoute: typeof AdminTorneosIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/torneos/$id': {
+      id: '/admin/torneos/$id'
+      path: '/torneos/$id'
+      fullPath: '/admin/torneos/$id'
+      preLoaderRoute: typeof AdminTorneosIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/torneos/nuevo': {
+      id: '/admin/torneos/nuevo'
+      path: '/torneos/nuevo'
+      fullPath: '/admin/torneos/nuevo'
+      preLoaderRoute: typeof AdminTorneosNuevoRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/torneos/$slug_/inscribir': {
       id: '/torneos/$slug_/inscribir'
       path: '/torneos/$slug/inscribir'
@@ -276,8 +353,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminTorneosIdRoute: typeof AdminTorneosIdRoute
+  AdminTorneosNuevoRoute: typeof AdminTorneosNuevoRoute
+  AdminTorneosIndexRoute: typeof AdminTorneosIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminTorneosIdRoute: AdminTorneosIdRoute,
+  AdminTorneosNuevoRoute: AdminTorneosNuevoRoute,
+  AdminTorneosIndexRoute: AdminTorneosIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   IngresarRoute: IngresarRoute,
   MisEquiposRoute: MisEquiposRoute,
   PrivacidadRoute: PrivacidadRoute,
