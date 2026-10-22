@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import type { NotificationKind, NotificationPayload } from "../../../shared/notifications";
 import { user } from "./auth";
 
@@ -23,6 +23,8 @@ export const notifications = pgTable(
     readAt: tz("read_at"),
     emailStatus: text("email_status").$type<EmailStatus>().notNull().default("pending"),
     emailAttempts: integer("email_attempts").notNull().default(0),
+    // When the outbox last claimed the row; a row left "sending" long after this was lost in a crash.
+    emailClaimedAt: tz("email_claimed_at"),
     emailedAt: tz("emailed_at"),
   },
   (t) => [
@@ -32,3 +34,11 @@ export const notifications = pgTable(
       .where(sql`${t.emailStatus} = 'pending'`),
   ],
 );
+
+/** No row means email is on. */
+export const notificationSettings = pgTable("notification_settings", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id),
+  emailEnabled: boolean("email_enabled").notNull().default(true),
+});

@@ -28,3 +28,18 @@ test("parseEnv treats empty values as unset", () => {
   });
   expect(env.DISCORD_CLIENT_ID).toBeUndefined();
 });
+
+const base = {
+  DATABASE_URL: "postgres://x",
+  RIOT_API_KEY: "k",
+  BETTER_AUTH_SECRET: "s",
+  BETTER_AUTH_URL: "http://localhost:3000",
+};
+
+test("email is optional, but a Resend key needs a sender", () => {
+  expect(parseEnv(base).RESEND_API_KEY).toBeUndefined();
+  expect(() => parseEnv({ ...base, RESEND_API_KEY: "re_123" })).toThrow("EMAIL_FROM");
+  expect(parseEnv({ ...base, RESEND_API_KEY: "re_123", EMAIL_FROM: "Gorosei <avisos@gorosei.gg>" }).EMAIL_FROM).toBe(
+    "Gorosei <avisos@gorosei.gg>",
+  );
+});

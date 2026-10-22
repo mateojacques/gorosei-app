@@ -299,6 +299,10 @@ export const esAR = {
   "tournament.col.payments": "Pagos",
 
   "site.admin": "Admin",
+  "email.open": "Ver en Gorosei",
+  "email.footer": "Te llega este mail porque tenés los avisos por email activados. Podés apagarlos en {link}",
+  "email.footerLead": "Te llega este mail porque tenés los avisos por email activados. Podés apagarlos en",
+
   "notification.cup": "{title} #{edition}",
   "notification.aCup": "una copa",
   "notification.missingOne": "falta 1 jugador",

@@ -1,18 +1,22 @@
 import { PgBoss } from "pg-boss";
 import { db } from "../db/client";
 import { env } from "../env";
+import { createLogMailer, createResendMailer } from "../email/mailer";
 import { riot } from "../riot";
+import { siteOrigin } from "../seo/origin";
 import { advanceTournaments } from "./advance-tournaments";
 import { sendCheckInReminders } from "./check-in-reminders";
 import { closeDueRegistrations } from "./close-registrations";
 import { createDueEditions } from "./create-editions";
 import { pollAllRanks } from "./poll-ranks";
+import { sendPendingEmails } from "./send-emails";
 
 const POLL_RANKS = "poll-ranks";
 const EVERY_SIX_HOURS = "0 */6 * * *";
 const CLOSE_REGISTRATIONS = "close-registrations";
 const ADVANCE_TOURNAMENTS = "advance-tournaments";
 const CREATE_EDITIONS = "create-editions";
+const SEND_EMAILS = "send-emails";
 const EVERY_MINUTE = "* * * * *";
 
 export async function registerJobs(boss: PgBoss): Promise<void> {
@@ -41,6 +45,15 @@ export async function registerJobs(boss: PgBoss): Promise<void> {
   await boss.work(CREATE_EDITIONS, async () => {
     const result = await createDueEditions(db, new Date());
     console.info(`[jobs] ${CREATE_EDITIONS}: created ${result.created}`);
+  });
+  const mailer = env.RESEND_API_KEY
+    ? createResendMailer({ apiKey: env.RESEND_API_KEY, from: env.EMAIL_FROM! })
+    : createLogMailer();
+  await boss.createQueue(SEND_EMAILS);
+  await boss.schedule(SEND_EMAILS, EVERY_MINUTE);
+  await boss.work(SEND_EMAILS, async () => {
+    const result = await sendPendingEmails({ db, mailer, origin: siteOrigin(env.BETTER_AUTH_URL) }, new Date());
+    console.info(`[jobs] ${SEND_EMAILS}: sent ${result.sent}, skipped ${result.skipped}, failed ${result.failed}`);
   });
 }
 
