@@ -1,4 +1,4 @@
-import type { RiotClient, RiotResult, RiotSoloRank } from "../../src/server/riot/types";
+import type { RiotClient, RiotMatch, RiotResult, RiotSoloRank } from "../../src/server/riot/types";
 
 type FakeAccount = {
   puuid: string;
@@ -15,6 +15,13 @@ const notFound = { ok: false, error: "not_found" } as const;
 export class FakeRiotClient implements RiotClient {
   private accounts = new Map<string, FakeAccount>();
   private unavailablePuuids = new Set<string>();
+  private matchesById = new Map<string, RiotMatch>();
+  readonly matchCalls: string[] = [];
+
+  addMatch(match: RiotMatch): this {
+    this.matchesById.set(match.matchId, match);
+    return this;
+  }
 
   addAccount(account: Partial<FakeAccount> & Pick<FakeAccount, "puuid" | "gameName" | "tagLine">): this {
     this.accounts.set(account.puuid, { profileIconId: 0, summonerLevel: 30, rank: null, ...account });
@@ -58,6 +65,13 @@ export class FakeRiotClient implements RiotClient {
 
   async getSoloRankByPuuid(puuid: string) {
     return this.lookup(puuid, (a) => (a.rank ? { ...a.rank } : null));
+  }
+
+  async getMatch(matchId: string): Promise<RiotResult<RiotMatch>> {
+    this.matchCalls.push(matchId);
+    if (this.unavailablePuuids.has(matchId)) return unavailable;
+    const match = this.matchesById.get(matchId);
+    return match ? { ok: true, data: match } : notFound;
   }
 
   private lookup<T>(puuid: string, pick: (a: FakeAccount) => T): RiotResult<T> {

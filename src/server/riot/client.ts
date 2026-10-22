@@ -1,5 +1,5 @@
 import { isDivision, isTier } from "../../shared/rank";
-import type { RiotAccount, RiotClient, RiotResult, RiotSoloRank } from "./types";
+import type { RiotAccount, RiotClient, RiotMatch, RiotResult, RiotSoloRank } from "./types";
 
 const REGIONAL_HOST = "https://americas.api.riotgames.com";
 const PLATFORM_HOST = "https://la2.api.riotgames.com";
@@ -14,6 +14,25 @@ type LeagueEntry = {
   wins: number;
   losses: number;
 };
+
+type MatchPayload = {
+  metadata: { matchId: string };
+  info: {
+    gameDuration: number;
+    teams: { teamId: number; win: boolean; bans: { championId: number }[] }[];
+    participants: {
+      puuid: string;
+      teamId: number;
+      championName: string;
+      kills: number;
+      deaths: number;
+      assists: number;
+      teamPosition: string;
+    }[];
+  };
+};
+
+const teamId = (id: number): 100 | 200 => (id === 200 ? 200 : 100);
 
 export type RiotClientOptions = {
   apiKey: string;
@@ -85,6 +104,29 @@ export function createRiotClient(opts: RiotClientOptions): RiotClient {
       );
       if (!result.ok) return result;
       return { ok: true, data: toSoloRank(result.data.find((e) => e.queueType === SOLO_QUEUE)) };
+    },
+
+    getMatch: async (matchId) => {
+      const result = await get<MatchPayload>(`${REGIONAL_HOST}/lol/match/v5/matches/${encodeURIComponent(matchId)}`);
+      if (!result.ok) return result;
+      const { metadata, info } = result.data;
+      const teams = info.teams.map((t) => ({ teamId: teamId(t.teamId), win: t.win, bans: t.bans.map((b) => b.championId) }));
+      const match: RiotMatch = {
+        matchId: metadata.matchId,
+        durationSeconds: info.gameDuration,
+        winningTeamId: teams.find((t) => t.win)?.teamId ?? 100,
+        teams,
+        players: info.participants.map((p) => ({
+          puuid: p.puuid,
+          teamId: teamId(p.teamId),
+          championName: p.championName,
+          kills: p.kills,
+          deaths: p.deaths,
+          assists: p.assists,
+          role: p.teamPosition,
+        })),
+      };
+      return { ok: true, data: match };
     },
   };
 }

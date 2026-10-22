@@ -131,3 +131,50 @@ test("getAccountByPuuid reads the current Riot ID", async () => {
   expect(await riot.getAccountByPuuid("p1")).toEqual({ ok: true, data: account });
   expect(stub.calls[0]!.url).toBe("https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid/p1");
 });
+
+test("getMatch hits the americas host and maps the match-v5 payload", async () => {
+  const stub = stubFetch([
+    {
+      status: 200,
+      body: {
+        metadata: { matchId: "LA2_123" },
+        info: {
+          gameDuration: 1805,
+          teams: [
+            { teamId: 100, win: false, bans: [{ championId: 1 }, { championId: 2 }] },
+            { teamId: 200, win: true, bans: [{ championId: 3 }] },
+          ],
+          participants: [
+            { puuid: "a", teamId: 100, championName: "Ahri", kills: 3, deaths: 4, assists: 5, teamPosition: "MIDDLE", extra: 1 },
+            { puuid: "b", teamId: 200, championName: "Zed", kills: 9, deaths: 1, assists: 2, teamPosition: "MIDDLE" },
+          ],
+        },
+      },
+    },
+  ]);
+  const riot = createRiotClient({ apiKey: "k", fetch: stub.fetch, sleep: noSleep });
+
+  expect(await riot.getMatch("LA2_123")).toEqual({
+    ok: true,
+    data: {
+      matchId: "LA2_123",
+      durationSeconds: 1805,
+      winningTeamId: 200,
+      teams: [
+        { teamId: 100, win: false, bans: [1, 2] },
+        { teamId: 200, win: true, bans: [3] },
+      ],
+      players: [
+        { puuid: "a", teamId: 100, championName: "Ahri", kills: 3, deaths: 4, assists: 5, role: "MIDDLE" },
+        { puuid: "b", teamId: 200, championName: "Zed", kills: 9, deaths: 1, assists: 2, role: "MIDDLE" },
+      ],
+    },
+  });
+  expect(stub.calls[0]!.url).toBe("https://americas.api.riotgames.com/lol/match/v5/matches/LA2_123");
+});
+
+test("getMatch maps 404 to not_found", async () => {
+  const stub = stubFetch([{ status: 404 }]);
+  const riot = createRiotClient({ apiKey: "k", fetch: stub.fetch, sleep: noSleep });
+  expect(await riot.getMatch("LA2_1")).toEqual({ ok: false, error: "not_found" });
+});
