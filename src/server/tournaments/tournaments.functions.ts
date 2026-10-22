@@ -35,11 +35,15 @@ const rosterInput = z.object({ starters: z.array(z.string()).max(10), subs: z.ar
 export const getTournamentPage = createServerFn({ method: "GET" })
   .validator(z.object({ slug: z.string() }))
   .handler(async ({ data }) => {
-    const { db, view } = await deps();
-    const tournament = await view.getTournamentView(db, data.slug);
-    if (!tournament) throw notFound();
-    const { configuredSiteOrigin } = await import("../seo/origin");
-    return { ...tournament, origin: await configuredSiteOrigin() };
+    const [{ db }, { loadTournamentPage }, { configuredSiteOrigin }, user] = await Promise.all([
+      import("../db/client"),
+      import("./tournament-page"),
+      import("../seo/origin"),
+      sessionUser(),
+    ]);
+    const page = await loadTournamentPage(db, data.slug, user ? { userId: user.id } : null, new Date());
+    if (!page) throw notFound();
+    return { ...page, origin: await configuredSiteOrigin() };
   });
 
 export const getRegisterPage = createServerFn({ method: "GET" })

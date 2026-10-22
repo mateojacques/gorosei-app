@@ -146,12 +146,12 @@ export async function checkedInTestTeam(
  * A live tournament: `teamCount` teams checked in fully (team i has the i-th best rank, so seed order is index order),
  * check-in closed and the bracket started.
  */
-export async function startedTestTournament(teamCount: number, overrides: Partial<TournamentInput> = {}) {
+export async function startedTestTournament(teamCount: number, overrides: Partial<TournamentInput> = {}, prefix = "s") {
   const tournament = await createTestTournament({ status: "registration_open", entryFeeArs: 0, rankSource: "current", ...overrides });
   const tiers = ["CHALLENGER", "GRANDMASTER", "MASTER", "DIAMOND", "EMERALD", "PLATINUM", "GOLD", "SILVER", "BRONZE", "IRON"] as const;
   const teams = [];
   for (let i = 0; i < teamCount; i++) {
-    teams.push(await checkedInTestTeam(tournament, `s${i}p`, 6, { rank: { tier: tiers[i % tiers.length]!, division: "I", lp: 0 } }));
+    teams.push(await checkedInTestTeam(tournament, `${prefix}${i}p`, 6, { rank: { tier: tiers[i % tiers.length]!, division: "I", lp: 0 } }));
   }
   await testDb.update(tournaments).set({ status: "check_in" }).where(eq(tournaments.id, tournament.id));
   const { closeCheckIn } = await import("../../src/server/matchday/check-in");

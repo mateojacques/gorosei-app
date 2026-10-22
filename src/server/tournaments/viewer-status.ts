@@ -6,7 +6,7 @@ import { checkIns, entryPayments, poolEntries, registrationPlayers, registration
 export type ViewerTournamentStatus = {
   riotLinked: boolean;
   inPool: boolean;
-  registration: { teamName: string; teamSlug: string; starters: number; paid: number; status: RegistrationStatus } | null;
+  registration: { registrationId: string; teamName: string; teamSlug: string; starters: number; paid: number; status: RegistrationStatus } | null;
   checkedIn: boolean;
 };
 
@@ -54,6 +54,7 @@ export async function getViewerTournamentStatus(db: Db, userId: string, tourname
         ),
       );
     registration = {
+      registrationId: onRoster.registrationId,
       teamName: onRoster.teamName,
       teamSlug: onRoster.teamSlug,
       starters: roster.filter((p) => !p.isSub).length,

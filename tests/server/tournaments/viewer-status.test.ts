@@ -30,7 +30,7 @@ test("a player on a partial, partly paid roster", async () => {
   expect(await getViewerTournamentStatus(testDb, "a2", t.id)).toEqual({
     riotLinked: true,
     inPool: false,
-    registration: { teamName: "Los Cuatro", teamSlug: team.slug, starters: 4, paid: 3, status: "pending" },
+    registration: { registrationId: expect.any(String), teamName: "Los Cuatro", teamSlug: team.slug, starters: 4, paid: 3, status: "pending" },
     checkedIn: false,
   });
 });

@@ -15,6 +15,12 @@ import { formatArs } from "../shared/format";
 import { t } from "../shared/i18n";
 import { absoluteUrl, eventJsonLd, jsonLdString, pageMeta } from "../shared/seo";
 import { ROSTER_STARTERS } from "../shared/tournament";
+import { statusChecklist } from "../shared/viewer-status";
+import { BracketView } from "../components/bracket/bracket-view";
+import { Schedule } from "../components/tournament/schedule";
+import { AfterHero, VodList } from "../components/tournament/stage-after";
+import { InPlayList, LiveHero } from "../components/tournament/stage-live";
+import { YourStatus } from "../components/tournament/your-status";
 
 export const Route = createFileRoute("/torneos/$slug")({
   loader: async ({ params }) => {
@@ -53,14 +59,38 @@ export const Route = createFileRoute("/torneos/$slug")({
 type TournamentPageData = Awaited<ReturnType<typeof getTournamentPage>>;
 type Panel = Awaited<ReturnType<typeof getCheckInPanel>>;
 
-// Only plain web links become clickable; anything else in the field stays text.
-const isWebUrl = (url: string) => /^https?:\/\//i.test(url);
+// Only real https links become clickable; anything else in the field stays text.
+const isWebUrl = (url: string) => /^https:\/\/[^\s]+$/i.test(url.trim());
+
+type Page = TournamentPageData & { panel: Panel };
 
 function TournamentPage() {
   const tournament = Route.useLoaderData();
-  const free = tournament.entryFeeArs === 0;
   return (
     <main>
+      {(tournament.status === "check_in" || tournament.status === "live") && <TournamentRealtime tournamentId={tournament.id} />}
+      {tournament.stage === "live" ? (
+        <LiveStage tournament={tournament} />
+      ) : tournament.stage === "after" ? (
+        <AfterStage tournament={tournament} />
+      ) : (
+        <BeforeStage tournament={tournament} />
+      )}
+    </main>
+  );
+}
+
+/** Live updates for everyone on the page while check-in or the bracket is running. */
+function TournamentRealtime({ tournamentId }: { tournamentId: string }) {
+  useRealtime([`tournament:${tournamentId}`]);
+  return null;
+}
+
+function BeforeStage({ tournament }: { tournament: Page }) {
+  const free = tournament.entryFeeArs === 0;
+  const status = tournament.viewerStatus;
+  return (
+    <>
       <section className="stage relative isolate overflow-hidden px-4 pt-8 pb-10 sm:px-8 md:pt-16 md:pb-14">
         <div className="mx-auto max-w-6xl">
           <TournamentStatusTag status={tournament.status} />
@@ -71,14 +101,7 @@ function TournamentPage() {
             {tournament.title}
           </h1>
           <CupCountdown startsAt={new Date(tournament.startsAt)} className="mt-5" />
-          <p className="mt-5 font-display text-lg font-extrabold tracking-[0.02em] uppercase">
-            {t("tournament.format", {
-              bracket: t(`cup.bracket.${tournament.bracket}`),
-              draftMode: t(`tournament.draftMode.${tournament.draftMode}`),
-              bestOf: tournament.bestOf,
-              finalsBestOf: tournament.finalsBestOf,
-            })}
-          </p>
+          <FormatLine tournament={tournament} />
           {tournament.status === "registration_open" && (
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
               <Button asChild size="lg">
@@ -100,50 +123,168 @@ function TournamentPage() {
       </section>
 
       <div className="px-4 py-12 sm:px-8 md:py-16">
-        <div className="mx-auto grid max-w-6xl gap-14 lg:grid-cols-[1fr_1.1fr] lg:items-start lg:gap-16">
-          <div className="flex flex-col gap-12">
-            <MatchDay panel={tournament.panel} tournamentId={tournament.id} />
-            <PrizeMeter
-              poolArs={tournament.poolArs}
-              goalArs={tournament.prizeGoalArs}
-              split={tournament.prizeSplit}
-              prizeShares={tournament.prizeShares}
-              goalShares={tournament.goalShares}
-            />
-            <Entry tournament={tournament} />
+        <div className="mx-auto flex max-w-6xl flex-col gap-16">
+          <div className="grid gap-14 lg:grid-cols-[1fr_1.1fr] lg:items-start lg:gap-16">
+            <div className="flex flex-col gap-12">
+              {status && (
+                <YourStatus
+                  steps={statusChecklist({
+                    riotLinked: status.riotLinked,
+                    free,
+                    inPool: status.inPool,
+                    registration: status.registration,
+                    tournamentStatus: tournament.status,
+                    checkedIn: status.checkedIn,
+                  })}
+                  slug={tournament.slug}
+                  teamSlug={status.registration?.teamSlug ?? null}
+                  inPool={status.inPool}
+                />
+              )}
+              <MatchDay panel={tournament.panel} tournamentId={tournament.id} />
+              <PrizeMeter
+                poolArs={tournament.poolArs}
+                goalArs={tournament.prizeGoalArs}
+                split={tournament.prizeSplit}
+                prizeShares={tournament.prizeShares}
+                goalShares={tournament.goalShares}
+              />
+              <Entry tournament={tournament} />
+              <Schedule rows={tournament.schedule} />
+            </div>
+            <div className="flex flex-col gap-12">
+              <EligibilitySummary rules={tournament.rules} maxSubs={tournament.maxSubs} />
+              <Teams tournament={tournament} free={free} />
+              <RulesText text={tournament.rulesText} />
+              {isWebUrl(tournament.streamUrl) && (
+                <a
+                  href={tournament.streamUrl.trim()}
+                  rel="noopener noreferrer"
+                  className="self-start font-semibold text-cobalt-light underline underline-offset-4 hover:text-ink"
+                >
+                  {t("tournament.stream")}
+                </a>
+              )}
+            </div>
           </div>
-          <div className="flex flex-col gap-12">
-            <EligibilitySummary rules={tournament.rules} maxSubs={tournament.maxSubs} />
-            <Teams tournament={tournament} free={free} />
-            {tournament.rulesText && (
-              <Block title={t("tournament.rulesText.title")}>
-                <p className="mt-3 whitespace-pre-line">{tournament.rulesText}</p>
-              </Block>
-            )}
-            {isWebUrl(tournament.streamUrl) && (
-              <a
-                href={tournament.streamUrl}
-                className="self-start font-semibold text-cobalt-light underline underline-offset-4 hover:text-ink"
-              >
-                {t("tournament.stream")}
-              </a>
-            )}
+          <BracketSection tournament={tournament} />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function LiveStage({ tournament }: { tournament: Page }) {
+  const free = tournament.entryFeeArs === 0;
+  return (
+    <>
+      <LiveHero title={tournament.title} edition={tournament.edition} streamUrl={tournament.streamUrl} />
+      <div className="px-4 py-12 sm:px-8 md:py-16">
+        <div className="mx-auto flex max-w-6xl flex-col gap-16">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-start lg:gap-16">
+            <InPlayList matches={tournament.bracketView?.matches ?? []} />
+            <MatchDay panel={tournament.panel} tournamentId={tournament.id} />
+          </div>
+          <BracketSection tournament={tournament} />
+          <div className="grid gap-14 lg:grid-cols-[1fr_1.1fr] lg:items-start lg:gap-16">
+            <div className="flex flex-col gap-12">
+              <Schedule rows={tournament.schedule} />
+              <EligibilitySummary rules={tournament.rules} maxSubs={tournament.maxSubs} />
+            </div>
+            <div className="flex flex-col gap-12">
+              <Teams tournament={tournament} free={free} />
+              <RulesText text={tournament.rulesText} />
+            </div>
           </div>
         </div>
       </div>
-    </main>
+    </>
+  );
+}
+
+function AfterStage({ tournament }: { tournament: Page }) {
+  const free = tournament.entryFeeArs === 0;
+  const status = tournament.status === "cancelled" ? "cancelled" : "finished";
+  return (
+    <>
+      <AfterHero title={tournament.title} edition={tournament.edition} status={status} results={tournament.results} next={tournament.next} />
+      <div className="px-4 py-12 sm:px-8 md:py-16">
+        <div className="mx-auto flex max-w-6xl flex-col gap-16">
+          {(tournament.bracketView || status === "finished") && <BracketSection tournament={tournament} />}
+          <VodList vods={tournament.results?.vods ?? []} />
+          <div className="grid gap-14 lg:grid-cols-[1fr_1.1fr] lg:items-start lg:gap-16">
+            <div className="flex flex-col gap-12">
+              <Teams tournament={tournament} free={free} />
+              <Schedule rows={tournament.schedule} />
+            </div>
+            <div className="flex flex-col gap-12">
+              <EligibilitySummary rules={tournament.rules} maxSubs={tournament.maxSubs} />
+              <RulesText text={tournament.rulesText} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function FormatLine({ tournament }: { tournament: Page }) {
+  return (
+    <p className="mt-5 font-display text-lg font-extrabold tracking-[0.02em] uppercase">
+      {t("tournament.format", {
+        bracket: t(`cup.bracket.${tournament.bracket}`),
+        draftMode: t(`tournament.draftMode.${tournament.draftMode}`),
+        bestOf: tournament.bestOf,
+        finalsBestOf: tournament.finalsBestOf,
+      })}
+    </p>
+  );
+}
+
+/** The bracket stays reachable in every stage; before it exists, the section says when it will. */
+function BracketSection({ tournament }: { tournament: Page }) {
+  const view = tournament.bracketView;
+  return (
+    <section aria-labelledby="bracket-h" id="cuadro" className="scroll-mt-6">
+      <h2 id="bracket-h" className="font-display text-3xl font-black uppercase">
+        {t("stage.bracket.title")}
+      </h2>
+      <div className="mt-5">
+        {view ? (
+          <BracketView bracket={view.bracket} matches={view.matches} highlightRegistrationId={tournament.viewerRegistrationId} />
+        ) : (
+          <p className="max-w-prose text-ink-muted">
+            {tournament.stage === "before" ? t("stage.bracket.pending") : t("stage.bracket.none")}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function RulesText({ text }: { text: string }) {
+  if (!text) return null;
+  return (
+    <Block title={t("tournament.rulesText.title")}>
+      <p className="mt-3 whitespace-pre-line">{text}</p>
+    </Block>
   );
 }
 
 /** Check-in while it runs, a way into the current match once the bracket is live; nothing for anyone else. */
 function MatchDay({ panel, tournamentId }: { panel: Panel; tournamentId: string }) {
   if (!panel) return null;
-  if (panel.kind === "check_in") return <CheckInPanel panel={panel} tournamentId={tournamentId} />;
+  if (panel.kind === "check_in") {
+    return (
+      <div id="check-in" className="scroll-mt-6">
+        <CheckInPanel panel={panel} tournamentId={tournamentId} />
+      </div>
+    );
+  }
   return <LivePanel panel={panel} tournamentId={tournamentId} />;
 }
 
-function LivePanel({ panel, tournamentId }: { panel: Extract<NonNullable<Panel>, { kind: "live" }>; tournamentId: string }) {
-  useRealtime([`tournament:${tournamentId}`]);
+function LivePanel({ panel }: { panel: Extract<NonNullable<Panel>, { kind: "live" }>; tournamentId: string }) {
   return (
     <Block title={t("matchday.live.title")}>
       {panel.matchId ? (
@@ -157,10 +298,10 @@ function LivePanel({ panel, tournamentId }: { panel: Extract<NonNullable<Panel>,
   );
 }
 
-function Block({ title, children }: { title: string; children: ReactNode }) {
+function Block({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId}>
+    <section id={id} aria-labelledby={headingId} className={id ? "scroll-mt-6" : undefined}>
       <h2 id={headingId} className="font-display text-2xl font-extrabold uppercase">
         {title}
       </h2>
@@ -172,13 +313,13 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
 function Entry({ tournament }: { tournament: TournamentPageData }) {
   if (tournament.entryFeeArs === 0) {
     return (
-      <Block title={t("tournament.entry.title")}>
+      <Block id="pago" title={t("tournament.entry.title")}>
         <p className="mt-3 text-lg font-semibold">{t("tournament.entry.free")}</p>
       </Block>
     );
   }
   return (
-    <Block title={t("tournament.entry.title")}>
+    <Block id="pago" title={t("tournament.entry.title")}>
       <p className="mt-3 text-lg">
         {t("tournament.entry.fee", { fee: formatArs(tournament.entryFeeArs) })} ·{" "}
         <strong className="font-bold">{t("cup.poolNote")}</strong>
