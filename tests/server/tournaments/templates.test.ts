@@ -62,6 +62,6 @@ test("listTemplates shows the latest edition and the next one", async () => {
 
   await createDueEditions(testDb, wednesday);
   [first] = await listTemplates(testDb, wednesday);
-  expect(first!.latest).toEqual({ slug: "copa-semanal-las-13", edition: 13, status: "registration_open" });
+  expect(first!.latest).toMatchObject({ slug: "copa-semanal-las-13", edition: 13, status: "registration_open" });
   expect(first!.next?.startsAt).toEqual(new Date("2026-10-31T21:00:00Z"));
 });

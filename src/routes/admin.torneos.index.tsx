@@ -21,9 +21,14 @@ function AdminTournamentsPage() {
         <h1 id={headingId} className="font-display text-[clamp(2.5rem,10vw,4rem)] leading-[0.9] font-black uppercase">
           {t("admin.tournaments.title")}
         </h1>
-        <Link to="/admin/torneos/nuevo" className={buttonVariants()}>
-          {t("admin.tournaments.new")}
-        </Link>
+        <div className="flex flex-wrap items-center gap-5">
+          <Link to="/admin/plantillas" className="font-display text-lg font-extrabold uppercase underline-offset-4 hover:underline">
+            {t("admin.templates.title")}
+          </Link>
+          <Link to="/admin/torneos/nuevo" className={buttonVariants()}>
+            {t("admin.tournaments.new")}
+          </Link>
+        </div>
       </div>
       {tournaments.length === 0 ? (
         <p className="mt-8 text-ink-muted">{t("admin.tournaments.empty")}</p>

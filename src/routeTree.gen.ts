@@ -26,6 +26,9 @@ import { Route as OgDefaultDotpngRouteImport } from './routes/og.default[.]png'
 import { Route as PartidasMatchIdRouteImport } from './routes/partidas.$matchId'
 import { Route as TorneosIndexRouteImport } from './routes/torneos.index'
 import { Route as TorneosSlugRouteImport } from './routes/torneos.$slug'
+import { Route as AdminPlantillasIndexRouteImport } from './routes/admin.plantillas.index'
+import { Route as AdminPlantillasIdRouteImport } from './routes/admin.plantillas.$id'
+import { Route as AdminPlantillasNuevaRouteImport } from './routes/admin.plantillas.nueva'
 import { Route as AdminTorneosIndexRouteImport } from './routes/admin.torneos.index'
 import { Route as AdminTorneosIdRouteImport } from './routes/admin.torneos.$id'
 import { Route as AdminTorneosNuevoRouteImport } from './routes/admin.torneos.nuevo'
@@ -119,6 +122,21 @@ const TorneosSlugRoute = TorneosSlugRouteImport.update({
   path: '/torneos/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPlantillasIndexRoute = AdminPlantillasIndexRouteImport.update({
+  id: '/plantillas/',
+  path: '/plantillas/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlantillasIdRoute = AdminPlantillasIdRouteImport.update({
+  id: '/plantillas/$id',
+  path: '/plantillas/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlantillasNuevaRoute = AdminPlantillasNuevaRouteImport.update({
+  id: '/plantillas/nueva',
+  path: '/plantillas/nueva',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminTorneosIndexRoute = AdminTorneosIndexRouteImport.update({
   id: '/torneos/',
   path: '/torneos/',
@@ -175,11 +193,14 @@ export interface FileRoutesByFullPath {
   '/partidas/$matchId': typeof PartidasMatchIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
   '/torneos/': typeof TorneosIndexRoute
+  '/admin/plantillas/$id': typeof AdminPlantillasIdRoute
+  '/admin/plantillas/nueva': typeof AdminPlantillasNuevaRoute
   '/admin/torneos/$id': typeof AdminTorneosIdRoute
   '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
   '/og/torneos/$slug': typeof OgTorneosSlugRoute
   '/torneos/$slug/agentes-libres': typeof TorneosSlugAgentesLibresRoute
   '/torneos/$slug/inscribir': typeof TorneosSlugInscribirRoute
+  '/admin/plantillas/': typeof AdminPlantillasIndexRoute
   '/admin/torneos/': typeof AdminTorneosIndexRoute
   '/torneos/$slug/equipos/$teamSlug': typeof TorneosSlugEquiposTeamSlugRoute
 }
@@ -201,11 +222,14 @@ export interface FileRoutesByTo {
   '/partidas/$matchId': typeof PartidasMatchIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
   '/torneos': typeof TorneosIndexRoute
+  '/admin/plantillas/$id': typeof AdminPlantillasIdRoute
+  '/admin/plantillas/nueva': typeof AdminPlantillasNuevaRoute
   '/admin/torneos/$id': typeof AdminTorneosIdRoute
   '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
   '/og/torneos/$slug': typeof OgTorneosSlugRoute
   '/torneos/$slug/agentes-libres': typeof TorneosSlugAgentesLibresRoute
   '/torneos/$slug/inscribir': typeof TorneosSlugInscribirRoute
+  '/admin/plantillas': typeof AdminPlantillasIndexRoute
   '/admin/torneos': typeof AdminTorneosIndexRoute
   '/torneos/$slug/equipos/$teamSlug': typeof TorneosSlugEquiposTeamSlugRoute
 }
@@ -228,11 +252,14 @@ export interface FileRoutesById {
   '/partidas/$matchId': typeof PartidasMatchIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
   '/torneos/': typeof TorneosIndexRoute
+  '/admin/plantillas/$id': typeof AdminPlantillasIdRoute
+  '/admin/plantillas/nueva': typeof AdminPlantillasNuevaRoute
   '/admin/torneos/$id': typeof AdminTorneosIdRoute
   '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
   '/og/torneos/$slug': typeof OgTorneosSlugRoute
   '/torneos/$slug_/agentes-libres': typeof TorneosSlugAgentesLibresRoute
   '/torneos/$slug_/inscribir': typeof TorneosSlugInscribirRoute
+  '/admin/plantillas/': typeof AdminPlantillasIndexRoute
   '/admin/torneos/': typeof AdminTorneosIndexRoute
   '/torneos/$slug_/equipos/$teamSlug': typeof TorneosSlugEquiposTeamSlugRoute
 }
@@ -256,11 +283,14 @@ export interface FileRouteTypes {
     | '/partidas/$matchId'
     | '/torneos/$slug'
     | '/torneos/'
+    | '/admin/plantillas/$id'
+    | '/admin/plantillas/nueva'
     | '/admin/torneos/$id'
     | '/admin/torneos/nuevo'
     | '/og/torneos/$slug'
     | '/torneos/$slug/agentes-libres'
     | '/torneos/$slug/inscribir'
+    | '/admin/plantillas/'
     | '/admin/torneos/'
     | '/torneos/$slug/equipos/$teamSlug'
   fileRoutesByTo: FileRoutesByTo
@@ -282,11 +312,14 @@ export interface FileRouteTypes {
     | '/partidas/$matchId'
     | '/torneos/$slug'
     | '/torneos'
+    | '/admin/plantillas/$id'
+    | '/admin/plantillas/nueva'
     | '/admin/torneos/$id'
     | '/admin/torneos/nuevo'
     | '/og/torneos/$slug'
     | '/torneos/$slug/agentes-libres'
     | '/torneos/$slug/inscribir'
+    | '/admin/plantillas'
     | '/admin/torneos'
     | '/torneos/$slug/equipos/$teamSlug'
   id:
@@ -308,11 +341,14 @@ export interface FileRouteTypes {
     | '/partidas/$matchId'
     | '/torneos/$slug'
     | '/torneos/'
+    | '/admin/plantillas/$id'
+    | '/admin/plantillas/nueva'
     | '/admin/torneos/$id'
     | '/admin/torneos/nuevo'
     | '/og/torneos/$slug'
     | '/torneos/$slug_/agentes-libres'
     | '/torneos/$slug_/inscribir'
+    | '/admin/plantillas/'
     | '/admin/torneos/'
     | '/torneos/$slug_/equipos/$teamSlug'
   fileRoutesById: FileRoutesById
@@ -462,6 +498,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TorneosSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/plantillas/': {
+      id: '/admin/plantillas/'
+      path: '/plantillas'
+      fullPath: '/admin/plantillas/'
+      preLoaderRoute: typeof AdminPlantillasIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/plantillas/$id': {
+      id: '/admin/plantillas/$id'
+      path: '/plantillas/$id'
+      fullPath: '/admin/plantillas/$id'
+      preLoaderRoute: typeof AdminPlantillasIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/plantillas/nueva': {
+      id: '/admin/plantillas/nueva'
+      path: '/plantillas/nueva'
+      fullPath: '/admin/plantillas/nueva'
+      preLoaderRoute: typeof AdminPlantillasNuevaRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/torneos/': {
       id: '/admin/torneos/'
       path: '/torneos'
@@ -515,14 +572,20 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminPlantillasIdRoute: typeof AdminPlantillasIdRoute
+  AdminPlantillasNuevaRoute: typeof AdminPlantillasNuevaRoute
   AdminTorneosIdRoute: typeof AdminTorneosIdRoute
   AdminTorneosNuevoRoute: typeof AdminTorneosNuevoRoute
+  AdminPlantillasIndexRoute: typeof AdminPlantillasIndexRoute
   AdminTorneosIndexRoute: typeof AdminTorneosIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminPlantillasIdRoute: AdminPlantillasIdRoute,
+  AdminPlantillasNuevaRoute: AdminPlantillasNuevaRoute,
   AdminTorneosIdRoute: AdminTorneosIdRoute,
   AdminTorneosNuevoRoute: AdminTorneosNuevoRoute,
+  AdminPlantillasIndexRoute: AdminPlantillasIndexRoute,
   AdminTorneosIndexRoute: AdminTorneosIndexRoute,
 }
 

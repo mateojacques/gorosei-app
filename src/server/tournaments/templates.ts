@@ -50,7 +50,7 @@ export async function getTemplate(db: Db, id: string): Promise<Template | null> 
 
 export type TemplateRow = Template & {
   next: EditionPlan | null;
-  latest: { slug: string; edition: number; status: TournamentStatus } | null;
+  latest: { id: string; slug: string; edition: number; status: TournamentStatus } | null;
 };
 
 /** `next` is the edition the job will create next (ignoring when), null while the template is paused. */
@@ -59,7 +59,7 @@ export async function listTemplates(db: Db, now: Date): Promise<TemplateRow[]> {
   return Promise.all(
     templates.map(async (template) => {
       const [latest] = await db
-        .select({ slug: tournaments.slug, edition: tournaments.edition, status: tournaments.status, startsAt: tournaments.startsAt })
+        .select({ id: tournaments.id, slug: tournaments.slug, edition: tournaments.edition, status: tournaments.status, startsAt: tournaments.startsAt })
         .from(tournaments)
         .where(eq(tournaments.templateId, template.id))
         .orderBy(desc(tournaments.startsAt))
@@ -67,7 +67,7 @@ export async function listTemplates(db: Db, now: Date): Promise<TemplateRow[]> {
       return {
         ...template,
         next: template.active ? planNextEdition(template, latest?.startsAt ?? null, false, now) : null,
-        latest: latest ? { slug: latest.slug, edition: latest.edition, status: latest.status } : null,
+        latest: latest ? { id: latest.id, slug: latest.slug, edition: latest.edition, status: latest.status } : null,
       };
     }),
   );
