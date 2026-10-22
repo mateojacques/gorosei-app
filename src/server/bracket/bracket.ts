@@ -1,8 +1,8 @@
-import { and, eq, inArray } from "drizzle-orm";
-import { type MatchStatus, bestOfFor } from "../../shared/match";
+import { and, asc, eq, inArray } from "drizzle-orm";
+import { type MatchPhase, type MatchStatus, type UserRole, bestOfFor, isDelayed, isModerator } from "../../shared/match";
 import { seedOrder } from "../../shared/seeding";
-import type { Executor } from "../db/client";
-import { brackets, matches, registrationPlayers, registrations } from "../db/schema";
+import type { Db, Executor } from "../db/client";
+import { brackets, matchReports, matches, registrationPlayers, registrations, teams } from "../db/schema";
 import type { Tournament } from "../tournaments/tournaments";
 import { createBracket, listEngineMatches } from "./engine";
 
@@ -69,4 +69,116 @@ export async function syncMatches(tx: Executor, tournamentId: string, now: Date)
     if (previous) await tx.update(matches).set(values).where(eq(matches.id, previous.id));
     else await tx.insert(matches).values({ ...values, openedAt: becameOpen ? now : null });
   }
+}
+
+export type MatchTeam = { registrationId: string; teamId: string; name: string; tag: string; slug: string };
+
+export type MatchView = {
+  id: string;
+  tournamentId: string;
+  phase: MatchPhase;
+  round: number;
+  number: number;
+  bestOf: 1 | 3 | 5;
+  status: MatchStatus;
+  delayed: boolean;
+  teams: [MatchTeam | null, MatchTeam | null];
+  score: [number | null, number | null];
+  winnerRegistrationId: string | null;
+  reports: { registrationId: string; score1: number; score2: number; screenshotUrl: string | null }[];
+  lobby: { name: string; password: string } | null;
+  riotMatchIds: string[];
+  stats: unknown | null;
+};
+
+async function loadTeams(tx: Executor, registrationIds: string[]): Promise<Map<string, MatchTeam>> {
+  if (registrationIds.length === 0) return new Map();
+  const rows = await tx
+    .select({ registrationId: registrations.id, teamId: teams.id, name: teams.name, tag: teams.tag, slug: teams.slug })
+    .from(registrations)
+    .innerJoin(teams, eq(teams.id, registrations.teamId))
+    .where(inArray(registrations.id, registrationIds));
+  return new Map(rows.map((r) => [r.registrationId, r]));
+}
+
+/** Lobby and reports are private to the two teams and to moderators. */
+export async function canSeeMatchPrivate(
+  tx: Executor,
+  match: { reg1Id: string | null; reg2Id: string | null },
+  viewer: { userId: string; role: UserRole } | null,
+): Promise<boolean> {
+  if (!viewer) return false;
+  if (isModerator(viewer.role)) return true;
+  const ids = [match.reg1Id, match.reg2Id].filter((id): id is string => id !== null);
+  if (ids.length === 0) return false;
+  const [row] = await tx
+    .select({ userId: registrationPlayers.userId })
+    .from(registrationPlayers)
+    .where(
+      and(
+        inArray(registrationPlayers.registrationId, ids),
+        eq(registrationPlayers.userId, viewer.userId),
+        eq(registrationPlayers.active, true),
+      ),
+    );
+  return !!row;
+}
+
+export async function getMatchView(
+  db: Db,
+  matchId: string,
+  viewer: { userId: string; role: UserRole } | null,
+  now: Date,
+): Promise<MatchView | null> {
+  const [match] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (!match) return null;
+  const teamMap = await loadTeams(db, [match.reg1Id, match.reg2Id].filter((id): id is string => id !== null));
+  const priv = await canSeeMatchPrivate(db, match, viewer);
+  const reports = priv
+    ? (await db.select().from(matchReports).where(eq(matchReports.matchId, matchId))).map((r) => ({
+        registrationId: r.registrationId,
+        score1: r.score1,
+        score2: r.score2,
+        screenshotUrl: r.screenshotUrl,
+      }))
+    : [];
+  return {
+    id: match.id,
+    tournamentId: match.tournamentId,
+    phase: match.phase,
+    round: match.roundNo,
+    number: match.number,
+    bestOf: match.bestOf,
+    status: match.status,
+    delayed: match.status !== "completed" && match.status !== "waiting" && isDelayed(match.openedAt, match.bestOf, now),
+    teams: [match.reg1Id ? (teamMap.get(match.reg1Id) ?? null) : null, match.reg2Id ? (teamMap.get(match.reg2Id) ?? null) : null],
+    score: [match.score1, match.score2],
+    winnerRegistrationId: match.winnerRegId,
+    reports,
+    lobby: priv && match.lobbyName !== null ? { name: match.lobbyName, password: match.lobbyPassword ?? "" } : null,
+    riotMatchIds: match.riotMatchIds,
+    stats: match.stats ?? null,
+  };
+}
+
+export type MatchSummary = Pick<MatchView, "id" | "phase" | "round" | "number" | "bestOf" | "status" | "teams" | "score" | "winnerRegistrationId">;
+
+export async function listMatches(db: Db, tournamentId: string): Promise<MatchSummary[]> {
+  const rows = await db
+    .select()
+    .from(matches)
+    .where(eq(matches.tournamentId, tournamentId))
+    .orderBy(asc(matches.groupNo), asc(matches.roundNo), asc(matches.number));
+  const teamMap = await loadTeams(db, [...new Set(rows.flatMap((m) => [m.reg1Id, m.reg2Id]).filter((id): id is string => id !== null))]);
+  return rows.map((m) => ({
+    id: m.id,
+    phase: m.phase,
+    round: m.roundNo,
+    number: m.number,
+    bestOf: m.bestOf,
+    status: m.status,
+    teams: [m.reg1Id ? (teamMap.get(m.reg1Id) ?? null) : null, m.reg2Id ? (teamMap.get(m.reg2Id) ?? null) : null],
+    score: [m.score1, m.score2],
+    winnerRegistrationId: m.winnerRegId,
+  }));
 }

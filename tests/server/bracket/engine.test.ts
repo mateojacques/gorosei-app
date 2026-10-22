@@ -34,6 +34,11 @@ describe("createBracket", () => {
     expect(all.map((m) => m.phase).sort()).toEqual(["final", "main", "main", "third_place"]);
   });
 
+  test("single elimination with 2 teams is just a final", async () => {
+    const { data } = await createBracket("single_elimination", seeds(2));
+    expect(listEngineMatches(data).map((m) => m.phase)).toEqual(["final"]);
+  });
+
   for (const type of ["single_elimination", "double_elimination"] as const) {
     test(`5 teams get byes (${type})`, async () => {
       const { data } = await createBracket(type, seeds(5));

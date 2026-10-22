@@ -7,6 +7,10 @@ export type MatchPhase = "winners" | "losers" | "grand_final" | "reset" | "main"
 
 type BestOf = 1 | 3 | 5;
 
+export type UserRole = "player" | "moderator" | "admin";
+
+export const isModerator = (role: UserRole) => role === "moderator" || role === "admin";
+
 export const RIOT_MATCH_ID = /^LA2_\d+$/;
 
 export const reportInputSchema = z.object({

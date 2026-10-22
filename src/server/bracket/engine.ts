@@ -64,7 +64,7 @@ export async function createBracket(
     settings:
       type === "double_elimination"
         ? { grandFinal: "double", seedOrdering: ["inner_outer"], balanceByes: true }
-        : { consolationFinal: true, seedOrdering: ["inner_outer"], balanceByes: true },
+        : { consolationFinal: seeding.length >= 4, seedOrdering: ["inner_outer"], balanceByes: true },
   });
   return { data: await manager.export(), stageId: Number(stage.id) };
 }
