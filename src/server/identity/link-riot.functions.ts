@@ -11,6 +11,12 @@ async function requireUser() {
   return user;
 }
 
+/** The image of the icon the player has to set, so they never have to decode an icon number. */
+async function iconUrl(iconId: number): Promise<string> {
+  const { ddragon, profileIconUrl } = await import("../riot/ddragon");
+  return profileIconUrl(await ddragon.latestVersion(), iconId);
+}
+
 async function linkDeps() {
   const [{ db }, { riot }] = await Promise.all([import("../db/client"), import("../riot")]);
   return { db, riot };
@@ -31,7 +37,11 @@ export const getRiotLinkState = createServerFn({ method: "GET" }).handler(async 
     .select({ requiredIconId: riotLinkChallenges.requiredIconId, expiresAt: riotLinkChallenges.expiresAt })
     .from(riotLinkChallenges)
     .where(eq(riotLinkChallenges.userId, user.id));
-  return { signedIn: true as const, linked: linked ?? null, challenge: challenge ?? null };
+  return {
+    signedIn: true as const,
+    linked: linked ?? null,
+    challenge: challenge ? { ...challenge, iconUrl: await iconUrl(challenge.requiredIconId) } : null,
+  };
 });
 
 export const startRiotLinkFn = createServerFn({ method: "POST" })
@@ -39,7 +49,8 @@ export const startRiotLinkFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const user = await requireUser();
     const { startRiotLink } = await import("./link-riot");
-    return startRiotLink(await linkDeps(), user.id, data.riotId);
+    const result = await startRiotLink(await linkDeps(), user.id, data.riotId);
+    return result.ok ? { ...result, iconUrl: await iconUrl(result.requiredIconId) } : result;
   });
 
 export const confirmRiotLinkFn = createServerFn({ method: "POST" }).handler(async () => {

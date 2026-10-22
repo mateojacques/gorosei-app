@@ -6,7 +6,7 @@ test("t returns the es-AR message", () => {
 });
 
 test("t interpolates params", () => {
-  expect(t("riotLink.setIcon", { iconId: 7 })).toContain("7");
+  expect(t("registration.paidProgress", { paid: 3, total: 5 })).toBe("3/5 pagos");
 });
 
 test("formatDateTime renders in Buenos Aires time", () => {
@@ -14,7 +14,7 @@ test("formatDateTime renders in Buenos Aires time", () => {
 });
 
 test("t leaves unknown placeholders intact", () => {
-  expect(t("riotLink.setIcon")).toContain("{iconId}");
+  expect(t("registration.paidProgress")).toContain("{paid}");
 });
 
 // @ts-expect-error unknown keys are a compile error

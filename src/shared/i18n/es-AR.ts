@@ -113,8 +113,10 @@ export const esAR = {
   "riotLink.riotId": "Riot ID",
   "riotLink.riotIdPlaceholder": "nombre#LAS",
   "riotLink.start": "Continuar",
-  "riotLink.setIcon": "Cambiá tu ícono de perfil al ícono número {iconId} y después tocá «Ya lo cambié».",
-  "riotLink.iconLabel": "Ícono de perfil",
+  "riotLink.setIcon": "Para comprobar que la cuenta es tuya, poné este ícono de perfil en el cliente de League of Legends y después tocá «Ya lo cambié».",
+  "riotLink.iconAlt": "El ícono de perfil que tenés que poner",
+  "riotLink.iconHint":
+    "En el cliente, hacé clic en tu ícono de perfil y buscalo entre los íconos básicos: todas las cuentas lo tienen. Cuando termine la verificación podés volver al tuyo.",
   "riotLink.verifying": "Verificación",
   "riotLink.timeLeft": "Tiempo restante: {time}",
   "riotLink.confirm": "Ya lo cambié",
@@ -128,7 +130,7 @@ export const esAR = {
   "riotLink.error.riot_unavailable": "Riot no está respondiendo. Probá de nuevo en unos minutos.",
   "riotLink.error.no_challenge": "No hay una verificación en curso. Empezá de nuevo.",
   "riotLink.error.expired": "La verificación venció. Empezá de nuevo.",
-  "riotLink.error.icon_mismatch": "Todavía no vemos el ícono {iconId} en tu perfil. Cambialo y volvé a intentar (puede tardar unos segundos).",
+  "riotLink.error.icon_mismatch": "Todavía no vemos ese ícono en tu perfil. Cambialo y volvé a intentar: puede tardar unos segundos en actualizarse.",
 
   "profile.level": "Nivel {level}",
   "profile.currentRank": "Rango actual",

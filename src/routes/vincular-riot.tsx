@@ -18,7 +18,7 @@ export const Route = createFileRoute("/vincular-riot")({
   component: LinkRiotPage,
 });
 
-type Challenge = { requiredIconId: number; expiresAt: Date };
+type Challenge = { requiredIconId: number; iconUrl: string; expiresAt: Date };
 
 function LinkRiotPage() {
   const state = Route.useLoaderData();
@@ -56,7 +56,7 @@ function LinkRiotPage() {
     setError(null);
     const result = await startRiotLinkFn({ data: { riotId } });
     setPending(false);
-    if (result.ok) setChallenge({ requiredIconId: result.requiredIconId, expiresAt: result.expiresAt });
+    if (result.ok) setChallenge({ requiredIconId: result.requiredIconId, iconUrl: result.iconUrl, expiresAt: result.expiresAt });
     else setError(t(`riotLink.error.${result.reason}`));
   }
 
@@ -71,7 +71,7 @@ function LinkRiotPage() {
       return;
     }
     const key: MessageKey = `riotLink.error.${result.reason}`;
-    setError(t(key, { iconId: challenge.requiredIconId }));
+    setError(t(key));
     if (result.reason === "expired" || result.reason === "no_challenge") setChallenge(null);
   }
 
@@ -79,14 +79,16 @@ function LinkRiotPage() {
     <Page>
       {challenge ? (
         <section className="mt-6 flex flex-col gap-5">
-          <p className="text-lg">{t("riotLink.setIcon", { iconId: challenge.requiredIconId })}</p>
-          <div>
-            <p className="font-display text-lg font-extrabold tracking-[0.04em] text-ink-muted uppercase">
-              {t("riotLink.iconLabel")}
-            </p>
-            <p className="font-display text-[clamp(5rem,30vw,8rem)] leading-[0.85] font-black text-cobalt-light">
-              {challenge.requiredIconId}
-            </p>
+          <p className="text-lg">{t("riotLink.setIcon")}</p>
+          <div className="flex items-center gap-5">
+            <img
+              src={challenge.iconUrl}
+              alt={t("riotLink.iconAlt")}
+              width={128}
+              height={128}
+              className="size-32 shrink-0 rounded-[8px] border-2 border-cobalt-light bg-surface-raised"
+            />
+            <p className="text-ink-muted">{t("riotLink.iconHint")}</p>
           </div>
           <CaptionBar block={t("riotLink.verifying")}>
             <Countdown until={challenge.expiresAt} />
