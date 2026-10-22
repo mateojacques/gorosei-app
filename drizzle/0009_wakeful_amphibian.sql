@@ -1,0 +1,2 @@
+ALTER TABLE "teams" ADD COLUMN "auto_formed_tournament_id" uuid;--> statement-breakpoint
+ALTER TABLE "teams" ADD CONSTRAINT "teams_auto_formed_tournament_id_tournaments_id_fk" FOREIGN KEY ("auto_formed_tournament_id") REFERENCES "public"."tournaments"("id") ON DELETE no action ON UPDATE no action;

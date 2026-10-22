@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { type AnyPgColumn, boolean, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import type { Role } from "../../../shared/pool";
 import type { EligibilityRule, PlayerSnapshot } from "../../../shared/eligibility";
 import type { RANK_SOURCES, RegistrationStatus, TournamentStatus } from "../../../shared/tournament";
@@ -48,6 +48,8 @@ export const teams = pgTable(
     captainUserId: text("captain_user_id")
       .notNull()
       .references(() => user.id),
+    // Set while a team formed by auto-placement has not been kept (renamed) by its captain.
+    autoFormedTournamentId: uuid("auto_formed_tournament_id").references((): AnyPgColumn => tournaments.id),
     createdAt: tz("created_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("teams_name_lower_idx").on(sql`lower(${t.name})`)],
@@ -195,7 +197,7 @@ export const entryCredits = pgTable(
       .references(() => user.id),
     // The tournament whose payment became this credit; null for manual credits.
     sourceTournamentId: uuid("source_tournament_id").references(() => tournaments.id),
-    reason: text("reason").$type<"unconfirmed" | "waitlisted" | "cancelled" | "manual">().notNull(),
+    reason: text("reason").$type<"unconfirmed" | "waitlisted" | "unplaced" | "cancelled" | "manual">().notNull(),
     status: text("status").$type<"available" | "used" | "revoked">().notNull().default("available"),
     // The payment this credit paid for while it is used.
     usedPaymentId: uuid("used_payment_id"),

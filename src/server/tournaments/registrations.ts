@@ -72,6 +72,34 @@ const INACTIVE_STATUSES: RegistrationStatus[] = ["withdrawn", "dropped"];
 
 type TakenSnapshot = { riotAccountId: string; snapshot: PlayerSnapshot };
 
+/** The stored-data half of a snapshot: no Riot call. Null when the player has no linked account. */
+export async function snapshotFromStored(
+  db: Executor,
+  userId: string,
+  rankSource: RankSource,
+  now: Date,
+): Promise<TakenSnapshot | null> {
+  const [account] = await db.select().from(riotAccounts).where(eq(riotAccounts.userId, userId));
+  if (!account) return null;
+  const [latest] = await db
+    .select({ wins: rankSnapshots.wins, losses: rankSnapshots.losses })
+    .from(rankSnapshots)
+    .where(eq(rankSnapshots.riotAccountId, account.id))
+    .orderBy(desc(rankSnapshots.observedAt))
+    .limit(1);
+  return {
+    riotAccountId: account.id,
+    snapshot: {
+      userId,
+      riotId: formatRiotId(account),
+      rank: await getEffectiveRank(db, account.id, rankSource),
+      summonerLevel: account.summonerLevel,
+      rankedGames: latest ? latest.wins + latest.losses : 0,
+      takenAt: now.toISOString(),
+    },
+  };
+}
+
 export async function snapshotWithAccount(
   deps: RegistrationDeps,
   userId: string,
@@ -82,25 +110,7 @@ export async function snapshotWithAccount(
   if (!linked) return null;
   // A failed refresh falls back to the latest stored data.
   if (rankSource === "current") await recordRankSnapshot(deps, linked.id);
-
-  const [account] = await db.select().from(riotAccounts).where(eq(riotAccounts.id, linked.id));
-  const [latest] = await db
-    .select({ wins: rankSnapshots.wins, losses: rankSnapshots.losses })
-    .from(rankSnapshots)
-    .where(eq(rankSnapshots.riotAccountId, linked.id))
-    .orderBy(desc(rankSnapshots.observedAt))
-    .limit(1);
-  return {
-    riotAccountId: linked.id,
-    snapshot: {
-      userId,
-      riotId: formatRiotId(account!),
-      rank: await getEffectiveRank(db, linked.id, rankSource),
-      summonerLevel: account!.summonerLevel,
-      rankedGames: latest ? latest.wins + latest.losses : 0,
-      takenAt: (deps.now?.() ?? new Date()).toISOString(),
-    },
-  };
+  return snapshotFromStored(db, userId, rankSource, deps.now?.() ?? new Date());
 }
 
 export async function takePlayerSnapshot(

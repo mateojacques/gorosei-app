@@ -4,17 +4,19 @@ import { auditLog, teamMembers, teams } from "../../../src/server/db/schema";
 import {
   cancelRequest,
   createTeam,
+  createTeamRow,
   getTeamBySlug,
   inviteByRiotId,
   leaveTeam,
   listPendingRequestsForTeam,
   listPendingRequestsForUser,
   removeMember,
+  renameTeam,
   requestToJoin,
   respondToRequest,
   transferCaptain,
 } from "../../../src/server/teams/teams";
-import { createTestTeam, linkedPlayer } from "../../helpers/competition";
+import { createTestTeam, createTestTournament, linkedPlayer } from "../../helpers/competition";
 import { createTestRiotAccount, createTestUser, resetTestDb, testDb } from "../../helpers/db";
 
 beforeEach(resetTestDb);
@@ -198,4 +200,29 @@ test("the captain cancels an invite and the requester cancels a join request", a
   expect(await cancelRequest(testDb, "cap", crypto.randomUUID())).toEqual({ ok: false, reason: "not_pending" });
   expect(await respondToRequest(testDb, "guest", invite.requestId, true)).toEqual({ ok: false, reason: "not_pending" });
   expect((await listPendingRequestsForTeam(testDb, team.id))).toHaveLength(0);
+});
+
+test("renameTeam validates like createTeam, is captain-only, and keeps an auto-formed team", async () => {
+  const tournament = await createTestTournament();
+  await linkedPlayer("cap");
+  await linkedPlayer("other");
+  const team = await testDb.transaction((tx) =>
+    createTeamRow(tx, { name: "Agentes libres 1-1", tag: "AL0", captainUserId: "cap", autoFormedTournamentId: tournament.id }),
+  );
+  await createTeam(testDb, "other", { name: "Ocupado", tag: "OCU" });
+
+  expect(await renameTeam(testDb, "other", team.id, { name: "Pibes", tag: "PBS" })).toEqual({ ok: false, reason: "not_captain" });
+  expect(await renameTeam(testDb, "cap", team.id, { name: "ab", tag: "PBS" })).toEqual({ ok: false, reason: "invalid_name" });
+  expect(await renameTeam(testDb, "cap", team.id, { name: "Pibes", tag: "x" })).toEqual({ ok: false, reason: "invalid_tag" });
+  expect(await renameTeam(testDb, "cap", team.id, { name: "ocupado", tag: "PBS" })).toEqual({ ok: false, reason: "name_taken" });
+  expect(await renameTeam(testDb, "cap", team.id, { name: "Pibes", tag: "ocu" })).toEqual({ ok: false, reason: "tag_taken" });
+  const [untouched] = await testDb.select().from(teams).where(eq(teams.id, team.id));
+  expect(untouched!.autoFormedTournamentId).toBe(tournament.id);
+
+  expect(await renameTeam(testDb, "cap", team.id, { name: "Pibes", tag: "pbs" })).toEqual({ ok: true });
+  const [renamed] = await testDb.select().from(teams).where(eq(teams.id, team.id));
+  expect(renamed).toMatchObject({ name: "Pibes", tag: "PBS", autoFormedTournamentId: null });
+  expect(await testDb.select().from(auditLog).where(eq(auditLog.action, "team.renamed"))).toHaveLength(1);
+  // keeping the same name and tag is not a clash with itself
+  expect(await renameTeam(testDb, "cap", team.id, { name: "Pibes", tag: "PBS" })).toEqual({ ok: true });
 });

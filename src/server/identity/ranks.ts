@@ -1,7 +1,7 @@
 import { and, desc, eq, gte } from "drizzle-orm";
 import { type Rank, isDivision, isTier, maxRank } from "../../shared/rank";
 import { writeAudit } from "../audit";
-import type { Db } from "../db/client";
+import type { Db, Executor } from "../db/client";
 import { rankOverrides, rankSnapshots, riotAccounts } from "../db/schema";
 import type { RiotClient } from "../riot/types";
 import { getSeasonStart } from "../settings";
@@ -56,7 +56,7 @@ export async function recordRankSnapshot(deps: RankDeps, riotAccountId: string):
   return "recorded";
 }
 
-export async function getCurrentRank(db: Db, riotAccountId: string): Promise<Rank | null> {
+export async function getCurrentRank(db: Executor, riotAccountId: string): Promise<Rank | null> {
   const [latest] = await db
     .select(rankColumns)
     .from(rankSnapshots)
@@ -66,7 +66,7 @@ export async function getCurrentRank(db: Db, riotAccountId: string): Promise<Ran
   return latest ? toRank(latest) : null;
 }
 
-export async function getSeasonPeak(db: Db, riotAccountId: string): Promise<Rank | null> {
+export async function getSeasonPeak(db: Executor, riotAccountId: string): Promise<Rank | null> {
   const seasonStart = await getSeasonStart(db);
   const rows = await db
     .select(rankColumns)
@@ -75,7 +75,7 @@ export async function getSeasonPeak(db: Db, riotAccountId: string): Promise<Rank
   return maxRank(rows.map(toRank));
 }
 
-export async function getEffectiveRank(db: Db, riotAccountId: string, source: RankSource): Promise<Rank | null> {
+export async function getEffectiveRank(db: Executor, riotAccountId: string, source: RankSource): Promise<Rank | null> {
   const [override] = await db
     .select({ tier: rankOverrides.tier, division: rankOverrides.division })
     .from(rankOverrides)

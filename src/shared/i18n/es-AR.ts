@@ -384,6 +384,7 @@ export const esAR = {
   "admin.player.col.note": "Nota",
   "admin.player.credit.reason.unconfirmed": "Equipo sin confirmar",
   "admin.player.credit.reason.waitlisted": "Lista de espera",
+  "admin.player.credit.reason.unplaced": "Sin equipo (agente libre)",
   "admin.player.credit.reason.cancelled": "Torneo cancelado",
   "admin.player.credit.reason.manual": "Manual",
   "admin.player.credit.status.available": "Disponible",

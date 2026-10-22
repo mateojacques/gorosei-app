@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import { writeAudit } from "./audit";
-import type { Db } from "./db/client";
+import type { Db, Executor } from "./db/client";
 import { appSettings } from "./db/schema";
 
 const SEASON_START = "season_start";
 
-export async function getSeasonStart(db: Db): Promise<Date> {
+export async function getSeasonStart(db: Executor): Promise<Date> {
   const [row] = await db.select({ value: appSettings.value }).from(appSettings).where(eq(appSettings.key, SEASON_START));
   if (typeof row?.value === "string") return new Date(row.value);
   return new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));

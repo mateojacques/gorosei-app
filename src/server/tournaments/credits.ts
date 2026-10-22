@@ -2,7 +2,8 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import type { RegistrationStatus } from "../../shared/tournament";
 import { writeAudit } from "../audit";
 import type { Db, Executor } from "../db/client";
-import { entryCredits, entryPayments, registrationPlayers, registrations, tournaments } from "../db/schema";
+import { entryCredits, entryPayments, poolEntries, registrationPlayers, registrations, tournaments } from "../db/schema";
+import { autoPlacePool } from "../pool/auto-place";
 import { acceptsPaymentFor, lockTournament, recomputeConfirmations, takesPayments } from "./confirmations";
 
 export type EntryCredit = typeof entryCredits.$inferSelect;
@@ -48,6 +49,10 @@ export async function closeRegistration(
     const tournament = await lockTournament(tx, tournamentId);
     if (tournament?.status !== "registration_open") return { ok: false, reason: "invalid_state" } as const;
 
+    // Free agents who are still in the pool become auto-formed teams, confirmed like any other qualifying roster.
+    await autoPlacePool(tx, tournament, now);
+    await recomputeConfirmations(tx, tournamentId, now);
+
     // Each player's registration status before the drop decides their credit reason.
     const rosters = await tx
       .select({ userId: registrationPlayers.userId, status: registrations.status })
@@ -76,12 +81,17 @@ export async function closeRegistration(
       });
     }
 
+    const poolUserIds = new Set(
+      (await tx.select({ userId: poolEntries.userId }).from(poolEntries).where(eq(poolEntries.tournamentId, tournamentId))).map(
+        (r) => r.userId,
+      ),
+    );
     let credited = 0;
     for (const { userId } of await livePayments(tx, tournamentId)) {
       const status = statusOf.get(userId);
       // Players on a confirmed roster are playing; everyone else who paid gets their entry back as a credit.
       if (status === "confirmed") continue;
-      const reason = status === "waitlisted" ? "waitlisted" : "unconfirmed";
+      const reason = status === "waitlisted" ? "waitlisted" : !status && poolUserIds.has(userId) ? "unplaced" : "unconfirmed";
       if (await grantCredit(tx, { userId, sourceTournamentId: tournamentId, reason, note: "", createdBy: actorUserId })) {
         credited++;
       }

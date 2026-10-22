@@ -1,6 +1,7 @@
 import { beforeEach, expect, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
-import { auditLog, entryCredits, entryPayments, registrationPlayers, registrations, tournaments } from "../../../src/server/db/schema";
+import { auditLog, entryCredits, entryPayments, registrationPlayers, registrations, teams, tournaments } from "../../../src/server/db/schema";
+import { enterPool } from "../../../src/server/pool/pool";
 import { markPaid, unmarkPaid } from "../../../src/server/tournaments/confirmations";
 import {
   applyCredit,
@@ -12,8 +13,9 @@ import {
 } from "../../../src/server/tournaments/credits";
 import { withdrawRegistration } from "../../../src/server/tournaments/registrations";
 import type { Rank } from "../../../src/shared/rank";
-import { createTestRegistration, createTestTeam, createTestTournament, linkedPlayer } from "../../helpers/competition";
+import { createTestRegistration, createTestTeam, createTestTournament, linkedPlayer, poolPlayer } from "../../helpers/competition";
 import { createTestUser, resetTestDb, testDb } from "../../helpers/db";
+import { FakeRiotClient } from "../../helpers/fake-riot";
 
 const PLAT2: Rank = { tier: "PLATINUM", division: "II", lp: 40 };
 const NOW = new Date("2026-10-30T20:00:00Z");
@@ -299,4 +301,111 @@ test("applying a credit over a forfeited payment records the replacement", async
     replacedForfeited: true,
     previousReference: "MP-OLD",
   });
+});
+
+// --- free-agent pool at close ---
+
+const TIERS_GOLD: Rank = { tier: "GOLD", division: "II", lp: 0 };
+
+async function pool(tournamentId: string, count: number, prefix = "fa") {
+  const ids: string[] = [];
+  for (let i = 0; i < count; i++) {
+    ids.push(await poolPlayer({ id: tournamentId }, `${prefix}${String(i).padStart(2, "0")}`, TIERS_GOLD, ["mid"]));
+    await Bun.sleep(2);
+  }
+  return ids;
+}
+
+const confirmedTeams = async (tournamentId: string) =>
+  (await testDb.select().from(registrations).where(eq(registrations.tournamentId, tournamentId))).filter((r) => r.status === "confirmed");
+
+test("13 paid pool players make 2 confirmed auto teams and 3 unplaced credits", async () => {
+  const tournament = await openTournament();
+  const ids = await pool(tournament.id, 13);
+  expect(await closeRegistration(testDb, tournament.id, NOW, null)).toEqual({ ok: true, dropped: 0, credited: 3 });
+  expect(await confirmedTeams(tournament.id)).toHaveLength(2);
+  const credits = await creditsFrom(tournament.id);
+  expect(credits.map((c) => c.userId).sort()).toEqual(ids.slice(10));
+  expect(credits.every((c) => c.reason === "unplaced")).toBe(true);
+});
+
+test("4 pool players form no teams and are all credited", async () => {
+  const tournament = await openTournament();
+  await pool(tournament.id, 4);
+  expect(await closeRegistration(testDb, tournament.id, NOW, null)).toEqual({ ok: true, dropped: 0, credited: 4 });
+  expect(await confirmedTeams(tournament.id)).toHaveLength(0);
+  expect((await creditsFrom(tournament.id)).every((c) => c.reason === "unplaced")).toBe(true);
+});
+
+test("a pool payment unmarked before close is not placed and gets no credit", async () => {
+  const tournament = await openTournament();
+  const ids = await pool(tournament.id, 10);
+  await unmarkPaid(testDb, admin, tournament.id, ids[3]!);
+  await closeRegistration(testDb, tournament.id, NOW, null);
+  expect(await confirmedTeams(tournament.id)).toHaveLength(1);
+  const credits = await creditsFrom(tournament.id);
+  expect(credits.map((c) => c.userId)).not.toContain(ids[3]);
+  expect(credits).toHaveLength(4);
+  const placed = await testDb.select().from(registrationPlayers).where(eq(registrationPlayers.userId, ids[3]!));
+  expect(placed).toHaveLength(0);
+});
+
+test("a forfeited payment is not placed", async () => {
+  const tournament = await openTournament();
+  const ids = await pool(tournament.id, 5);
+  await testDb.update(entryPayments).set({ forfeited: true }).where(eq(entryPayments.userId, ids[0]!));
+  await closeRegistration(testDb, tournament.id, NOW, null);
+  expect(await confirmedTeams(tournament.id)).toHaveLength(0);
+  expect(await testDb.select().from(registrationPlayers).where(eq(registrationPlayers.userId, ids[0]!))).toHaveLength(0);
+});
+
+test("with the cap already full no auto team forms and every pool player is credited", async () => {
+  const tournament = await openTournament({ teamCap: 1 });
+  const team = await registered(tournament.id, "t");
+  await markPaid(testDb, admin, tournament.id, team.ids, "MP");
+  await pool(tournament.id, 10);
+  expect(await closeRegistration(testDb, tournament.id, NOW, null)).toEqual({ ok: true, dropped: 0, credited: 10 });
+  expect(await confirmedTeams(tournament.id)).toHaveLength(1);
+  expect((await creditsFrom(tournament.id)).every((c) => c.reason === "unplaced")).toBe(true);
+});
+
+test("auto teams do not exceed the free cap slots", async () => {
+  const tournament = await openTournament({ teamCap: 3 });
+  for (const prefix of ["a", "b"]) {
+    const team = await registered(tournament.id, prefix);
+    await markPaid(testDb, admin, tournament.id, team.ids, "MP");
+  }
+  await pool(tournament.id, 10);
+  expect(await closeRegistration(testDb, tournament.id, NOW, null)).toMatchObject({ ok: true, credited: 5 });
+  expect(await confirmedTeams(tournament.id)).toHaveLength(3);
+});
+
+test("closing twice creates no second set of teams or credits", async () => {
+  const tournament = await openTournament();
+  await pool(tournament.id, 13);
+  await closeRegistration(testDb, tournament.id, NOW, null);
+  const teamsBefore = (await testDb.select().from(teams)).length;
+  const creditsBefore = (await creditsFrom(tournament.id)).length;
+  expect(await closeRegistration(testDb, tournament.id, NOW, null)).toEqual({ ok: false, reason: "invalid_state" });
+  expect((await testDb.select().from(teams)).length).toBe(teamsBefore);
+  expect((await creditsFrom(tournament.id)).length).toBe(creditsBefore);
+});
+
+test("players who opted out of auto-place are credited when unplaced", async () => {
+  const tournament = await openTournament();
+  await pool(tournament.id, 5);
+  await poolPlayer(tournament, "optout", TIERS_GOLD, ["mid"], { autoPlace: false });
+  expect(await closeRegistration(testDb, tournament.id, NOW, null)).toMatchObject({ ok: true, credited: 1 });
+  const [credit] = await creditsFrom(tournament.id);
+  expect(credit).toMatchObject({ userId: "optout", reason: "unplaced" });
+});
+
+test("a free tournament auto-places with no payments", async () => {
+  const tournament = await openTournament({ entryFeeArs: 0 });
+  for (let i = 0; i < 5; i++) {
+    await linkedPlayer(`free${i}`, TIERS_GOLD);
+    expect((await enterPool({ db: testDb, riot: new FakeRiotClient() }, `free${i}`, tournament.id, { roles: ["mid"], autoPlace: true })).ok).toBe(true);
+  }
+  expect(await closeRegistration(testDb, tournament.id, NOW, null)).toEqual({ ok: true, dropped: 0, credited: 0 });
+  expect(await confirmedTeams(tournament.id)).toHaveLength(1);
 });

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, like, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, like, ne, notInArray, or, sql } from "drizzle-orm";
 import type { Rank } from "../../shared/rank";
 import { parseRiotId } from "../../shared/riot-id";
 import { slugify } from "../../shared/slug";
@@ -114,6 +114,54 @@ async function releaseFromRosters(tx: Executor, teamId: string, userId: string):
   return registrationIds;
 }
 
+type TeamNameRejection = "invalid_name" | "invalid_tag" | "name_taken" | "tag_taken";
+
+/** Trims and checks the name and tag, returning the normalized values or the reason they are invalid. */
+function validateTeamName(input: { name: string; tag: string }): { name: string; tag: string } | TeamNameRejection {
+  const name = input.name.trim();
+  const tag = input.tag.trim().toUpperCase();
+  if (codePoints(name) < NAME_MIN || codePoints(name) > NAME_MAX) return "invalid_name";
+  if (!TAG_PATTERN.test(tag)) return "invalid_tag";
+  return { name, tag };
+}
+
+/** The first name or tag clash with a team other than `exceptTeamId`. */
+async function nameClash(tx: Executor, name: string, tag: string, exceptTeamId?: string): Promise<"name_taken" | "tag_taken" | null> {
+  const others = exceptTeamId ? ne(teams.id, exceptTeamId) : undefined;
+  const [sameName] = await tx.select({ id: teams.id }).from(teams).where(and(sql`lower(${teams.name}) = lower(${name})`, others));
+  if (sameName) return "name_taken";
+  const [sameTag] = await tx.select({ id: teams.id }).from(teams).where(and(eq(teams.tag, tag), others));
+  return sameTag ? "tag_taken" : null;
+}
+
+/** Inserts the team and its captain membership; the caller has validated the name and tag. */
+export async function createTeamRow(
+  tx: Executor,
+  input: { name: string; tag: string; captainUserId: string; autoFormedTournamentId?: string },
+): Promise<{ id: string; slug: string }> {
+  const slug = await uniqueTeamSlug(tx, slugify(input.name) || "equipo");
+  const [team] = await tx
+    .insert(teams)
+    .values({
+      slug,
+      name: input.name,
+      tag: input.tag,
+      captainUserId: input.captainUserId,
+      autoFormedTournamentId: input.autoFormedTournamentId ?? null,
+    })
+    .returning({ id: teams.id });
+  await tx.insert(teamMembers).values({ teamId: team!.id, userId: input.captainUserId, role: "captain" });
+  return { id: team!.id, slug };
+}
+
+function rejectNameConflict(error: unknown): { ok: false; reason: "tag_taken" | "name_taken" } {
+  // Two writers racing for the same name or tag: the unique indexes are the final arbiter.
+  const constraint = uniqueViolation(error);
+  if (constraint === "teams_tag_unique") return { ok: false, reason: "tag_taken" };
+  if (constraint === "teams_name_lower_idx") return { ok: false, reason: "name_taken" };
+  throw error;
+}
+
 export async function createTeam(
   db: Db,
   userId: string,
@@ -122,37 +170,58 @@ export async function createTeam(
   | { ok: true; teamId: string; slug: string }
   | { ok: false; reason: "riot_required" | "invalid_name" | "invalid_tag" | "name_taken" | "tag_taken" }
 > {
-  const name = input.name.trim();
-  const tag = input.tag.trim().toUpperCase();
-  if (codePoints(name) < NAME_MIN || codePoints(name) > NAME_MAX) return { ok: false, reason: "invalid_name" };
-  if (!TAG_PATTERN.test(tag)) return { ok: false, reason: "invalid_tag" };
+  const valid = validateTeamName(input);
+  if (typeof valid === "string") return { ok: false, reason: valid };
+  const { name, tag } = valid;
 
   try {
     return await db.transaction(async (tx) => {
       if (!(await hasRiotAccount(tx, userId))) return { ok: false, reason: "riot_required" } as const;
-      const [sameName] = await tx.select({ id: teams.id }).from(teams).where(sql`lower(${teams.name}) = lower(${name})`);
-      if (sameName) return { ok: false, reason: "name_taken" } as const;
-      const [sameTag] = await tx.select({ id: teams.id }).from(teams).where(eq(teams.tag, tag));
-      if (sameTag) return { ok: false, reason: "tag_taken" } as const;
+      const clash = await nameClash(tx, name, tag);
+      if (clash) return { ok: false, reason: clash } as const;
 
-      const slug = await uniqueTeamSlug(tx, slugify(name) || "equipo");
-      const [team] = await tx.insert(teams).values({ slug, name, tag, captainUserId: userId }).returning({ id: teams.id });
-      await tx.insert(teamMembers).values({ teamId: team!.id, userId, role: "captain" });
+      const team = await createTeamRow(tx, { name, tag, captainUserId: userId });
       await writeAudit(tx, {
         actorUserId: userId,
         action: "team.created",
         entityType: "team",
-        entityId: team!.id,
-        data: { name, tag, slug },
+        entityId: team.id,
+        data: { name, tag, slug: team.slug },
       });
-      return { ok: true, teamId: team!.id, slug } as const;
+      return { ok: true, teamId: team.id, slug: team.slug } as const;
     });
   } catch (error) {
-    // Two creators racing for the same name or tag: the unique indexes are the final arbiter.
-    const constraint = uniqueViolation(error);
-    if (constraint === "teams_tag_unique") return { ok: false, reason: "tag_taken" };
-    if (constraint === "teams_name_lower_idx") return { ok: false, reason: "name_taken" };
-    throw error;
+    return rejectNameConflict(error);
+  }
+}
+
+/** Renaming is how a captain keeps an auto-formed team: it clears the auto-formed flag. */
+export async function renameTeam(
+  db: Db,
+  captainId: string,
+  teamId: string,
+  input: { name: string; tag: string },
+): Promise<{ ok: true } | { ok: false; reason: "not_captain" | TeamNameRejection }> {
+  try {
+    return await db.transaction(async (tx) => {
+      const team = await lockTeam(tx, teamId);
+      if (!team || team.captainUserId !== captainId) return { ok: false, reason: "not_captain" } as const;
+      const valid = validateTeamName(input);
+      if (typeof valid === "string") return { ok: false, reason: valid } as const;
+      const clash = await nameClash(tx, valid.name, valid.tag, teamId);
+      if (clash) return { ok: false, reason: clash } as const;
+      await tx.update(teams).set({ name: valid.name, tag: valid.tag, autoFormedTournamentId: null }).where(eq(teams.id, teamId));
+      await writeAudit(tx, {
+        actorUserId: captainId,
+        action: "team.renamed",
+        entityType: "team",
+        entityId: teamId,
+        data: { from: { name: team.name, tag: team.tag }, to: valid, wasAutoFormed: team.autoFormedTournamentId !== null },
+      });
+      return { ok: true } as const;
+    });
+  } catch (error) {
+    return rejectNameConflict(error);
   }
 }
 
