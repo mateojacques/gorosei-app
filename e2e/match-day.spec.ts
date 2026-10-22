@@ -142,11 +142,13 @@ test("the winner's next match opens on their tournament page without a reload", 
   await expect(page.getByRole("link", { name: "Ir a tu partida" })).toBeVisible(LIVE);
 });
 
-test("a player outside the match gets the not-found page", async ({ browser }) => {
+test("a player outside the match sees the public match without lobby or chat", async ({ browser }) => {
   const page = await pageAs(browser, outsider.storageState);
   const response = await page.goto(`/partidas/${matchId}`);
-  expect(response?.status()).toBe(404);
-  await expect(page.getByText("No encontramos esa partida.")).toBeVisible();
+  expect(response?.status()).toBe(200);
+  await expect(page.getByRole("heading", { name: "Resultado" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sala" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Chat de la partida" })).toHaveCount(0);
 });
 
 test("a chat message from one captain reaches the other", async ({ browser }) => {

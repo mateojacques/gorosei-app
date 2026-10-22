@@ -62,6 +62,8 @@ export const matches = pgTable(
     confirmedAt: tz("confirmed_at"),
     riotMatchIds: jsonb("riot_match_ids").$type<string[]>().notNull().default([]),
     stats: jsonb("stats").$type<unknown>(),
+    // A moderator-set https link to the recorded broadcast of this match.
+    vodUrl: text("vod_url"),
   },
   (t) => [uniqueIndex("matches_tournament_bm_idx").on(t.tournamentId, t.bmMatchId), index("matches_status_idx").on(t.status)],
 );

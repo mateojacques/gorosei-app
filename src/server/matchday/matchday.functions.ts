@@ -104,39 +104,18 @@ export const getCheckInPanel = createServerFn({ method: "GET" })
 
 // ---- Match page ----
 
-async function matchPage(matchId: string, user: { id: string; role: "player" | "moderator" | "admin" }) {
-  const { db, bracket, chat, schema, orm } = await deps();
-  const now = new Date();
-  const viewer = { userId: user.id, role: user.role };
-  const match = await bracket.getMatchView(db, matchId, viewer, now);
-  if (!match || !(await bracket.canSeeMatchPrivate(db, { reg1Id: match.teams[0]?.registrationId ?? null, reg2Id: match.teams[1]?.registrationId ?? null }, viewer))) {
-    throw notFound();
-  }
-  const [tournament] = await db
-    .select({ slug: schema.tournaments.slug, title: schema.tournaments.title, edition: schema.tournaments.edition })
-    .from(schema.tournaments)
-    .where(orm.eq(schema.tournaments.id, match.tournamentId));
-  const messages = (await chat.listMessages(db, user, matchId)) ?? [];
-  // Which side (if any) the viewer captains: only captains report.
-  const captained = await Promise.all(
-    match.teams.map(async (team) => {
-      if (!team) return false;
-      const [row] = await db
-        .select({ captainUserId: schema.teams.captainUserId })
-        .from(schema.teams)
-        .where(orm.eq(schema.teams.id, team.teamId));
-      return row?.captainUserId === user.id;
-    }),
-  );
-  return { match, tournament: tournament!, messages, captainSide: captained[0] ? (0 as const) : captained[1] ? (1 as const) : null, viewer };
+async function matchPage(matchId: string, user: { id: string; role: "player" | "moderator" | "admin" } | null) {
+  const [{ db }, { loadMatchPage }] = await Promise.all([import("../db/client"), import("./match-page")]);
+  const page = await loadMatchPage(db, matchId, user ? { userId: user.id, role: user.role } : null, new Date());
+  if (!page) throw notFound();
+  return page;
 }
 
 export const getMatchPage = createServerFn({ method: "GET" })
   .validator(z.object({ matchId: id }))
   .handler(async ({ data }) => {
-    const user = await sessionUser();
-    if (!user) throw notFound();
-    return matchPage(data.matchId, user);
+    // Public: signed-out visitors get the match without lobby, reports or chat.
+    return matchPage(data.matchId, await sessionUser());
   });
 
 export const getConsolePage = createServerFn({ method: "GET" })
@@ -199,6 +178,14 @@ export const swapPlayerFn = createServerFn({ method: "POST" })
     const user = await requireModerator();
     const { db, riot, moderation } = await deps();
     return moderation.swapPlayer({ db, riot }, user.id, data.registrationId, data.outUserId, data.inUserId);
+  });
+
+export const setMatchVodFn = createServerFn({ method: "POST" })
+  .validator(z.object({ matchId: id, url: z.string().max(2000).nullable() }))
+  .handler(async ({ data }) => {
+    const user = await requireModerator();
+    const { db, moderation } = await deps();
+    return moderation.setMatchVod(db, user.id, data.matchId, data.url === "" ? null : data.url);
   });
 
 // ---- Chat and stats ----

@@ -1,7 +1,7 @@
-import { and, asc, eq, gt, inArray, ne } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, ne } from "drizzle-orm";
 import type { MatchPhase } from "../../shared/match";
 import type { Db } from "../db/client";
-import { brackets, registrations, teams, tournaments } from "../db/schema";
+import { brackets, matches, registrations, teams, tournaments } from "../db/schema";
 
 export type ResultTeam = { registrationId: string; teamName: string; teamSlug: string; tag: string };
 
@@ -27,13 +27,27 @@ export async function getTournamentResults(db: Db, tournamentId: string, prizeSh
   if (tournament?.status !== "finished") return null;
   const [bracket] = await db.select({ standings: brackets.finalStandings }).from(brackets).where(eq(brackets.tournamentId, tournamentId));
   const top = (bracket?.standings ?? []).filter((s) => s.rank >= 1 && s.rank <= 3).sort((a, b) => a.rank - b.rank);
-  const named = await resultTeams(db, top.map((s) => s.registrationId));
+  const vodRows = await db
+    .select({ id: matches.id, phase: matches.phase, round: matches.roundNo, reg1Id: matches.reg1Id, reg2Id: matches.reg2Id, url: matches.vodUrl })
+    .from(matches)
+    .where(and(eq(matches.tournamentId, tournamentId), isNotNull(matches.vodUrl)))
+    .orderBy(asc(matches.roundNo), asc(matches.number), asc(matches.groupNo));
+  const vodRegIds = vodRows.flatMap((m) => [m.reg1Id, m.reg2Id]).filter((id): id is string => id !== null);
+  const named = await resultTeams(db, [...new Set([...top.map((s) => s.registrationId), ...vodRegIds])]);
+  const nameOf = (id: string | null) => (id ? (named.get(id)?.teamName ?? "") : "");
+  const vods: TournamentResults["vods"] = vodRows.map((m) => ({
+    matchId: m.id,
+    phase: m.phase,
+    round: m.round,
+    teams: [nameOf(m.reg1Id), nameOf(m.reg2Id)],
+    url: m.url!,
+  }));
   const podium: TournamentResults["podium"] = [];
   for (const s of top) {
     const team = named.get(s.registrationId);
     if (team) podium.push({ rank: s.rank as 1 | 2 | 3, team, prizeArs: prizeShares[s.rank - 1] ?? null });
   }
-  return { champion: podium.find((p) => p.rank === 1)?.team ?? null, podium, vods: [] };
+  return { champion: podium.find((p) => p.rank === 1)?.team ?? null, podium, vods };
 }
 
 export type NextCup = { slug: string; title: string; edition: number; startsAt: Date };

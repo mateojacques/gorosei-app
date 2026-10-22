@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
-import { brackets, tournaments } from "../../../src/server/db/schema";
+import { brackets, matches, tournaments } from "../../../src/server/db/schema";
 import { getNextTournament, getTournamentResults } from "../../../src/server/tournaments/results";
 import { createTestTournament, startedTestTournament } from "../../helpers/competition";
 import { resetTestDb, testDb } from "../../helpers/db";
@@ -85,4 +85,24 @@ test("no later cup → null", async () => {
   const current = await createTestTournament({ status: "finished", ...at(5) });
   await createTestTournament({ status: "draft", ...at(9) });
   expect(await getNextTournament(testDb, { id: current.id, startsAt: current.startsAt })).toBeNull();
+});
+
+test("vods list matches with a stored link, by round then number, with team names", async () => {
+  const { tournament } = await finishedWith([{ index: 0, rank: 1 }]);
+  const all = await testDb.select().from(matches).where(eq(matches.tournamentId, tournament.id));
+  const withTeams = all.filter((m) => m.reg1Id && m.reg2Id).sort((a, b) => b.roundNo - a.roundNo || b.number - a.number);
+  const empty = all.find((m) => !m.reg1Id || !m.reg2Id);
+  for (const [i, m] of withTeams.entries()) {
+    await testDb.update(matches).set({ vodUrl: `https://example.com/vod/${i}` }).where(eq(matches.id, m.id));
+  }
+  if (empty) await testDb.update(matches).set({ vodUrl: "https://example.com/vod/empty" }).where(eq(matches.id, empty.id));
+  const results = (await getTournamentResults(testDb, tournament.id, [1]))!;
+  const expected = [...withTeams, ...(empty ? [empty] : [])].sort((a, b) => a.roundNo - b.roundNo || a.number - b.number || a.groupNo - b.groupNo);
+  expect(results.vods.map((v) => v.matchId)).toEqual(expected.map((m) => m.id));
+  for (const v of results.vods) {
+    const m = expected.find((x) => x.id === v.matchId)!;
+    expect(v.teams[0] === "").toBe(!m.reg1Id);
+    expect(v.teams[1] === "").toBe(!m.reg2Id);
+    expect(v.url.startsWith("https://example.com/vod/")).toBe(true);
+  }
 });

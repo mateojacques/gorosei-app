@@ -5,6 +5,7 @@ import { MatchHeader } from "../components/matchday/match-header";
 import { MatchStatsTable } from "../components/matchday/match-stats";
 import { ReportForm, ReportList, reportSummary } from "../components/matchday/report-form";
 import { useRealtime } from "../components/matchday/use-realtime";
+import { VodBox } from "../components/matchday/vod-box";
 import { NotFound } from "../components/site/not-found";
 import { getMatchPage } from "../server/matchday/matchday.functions";
 import { t } from "../shared/i18n";
@@ -18,8 +19,9 @@ export const Route = createFileRoute("/partidas/$matchId")({
 });
 
 function MatchPage() {
-  const { match, tournament, messages, captainSide, viewer } = Route.useLoaderData();
-  useRealtime([`match:${match.id}`, `chat:${match.id}`]);
+  const { match, tournament, messages, captainSide, viewer, canSeePrivate } = Route.useLoaderData();
+  const moderator = viewer !== null && isModerator(viewer.role);
+  useRealtime(canSeePrivate ? [`match:${match.id}`, `chat:${match.id}`] : [`match:${match.id}`]);
   const canReport = captainSide !== null && match.status !== "completed" && match.status !== "waiting";
   const summary = reportSummary(match);
   return (
@@ -36,7 +38,7 @@ function MatchPage() {
           <MatchHeader match={match} tournament={tournament} />
         </div>
 
-        {match.status !== "waiting" && <LobbyBox matchId={match.id} lobby={match.lobby} canCreate={isModerator(viewer.role)} />}
+        {canSeePrivate && match.status !== "waiting" && <LobbyBox matchId={match.id} lobby={match.lobby} canCreate={moderator} />}
 
         <section aria-labelledby="result-h" className="flex flex-col gap-4">
           <h2 id="result-h" className="font-display text-2xl font-extrabold uppercase">
@@ -52,12 +54,15 @@ function MatchPage() {
           {canReport && captainSide !== null ? (
             <ReportForm key={`${match.id}-${match.reports.length}-${match.status}`} match={match} side={captainSide} />
           ) : (
-            match.status !== "completed" && match.status !== "waiting" && <p className="text-ink-muted">{t("matchday.report.captainsOnly")}</p>
+            canSeePrivate &&
+            match.status !== "completed" &&
+            match.status !== "waiting" && <p className="text-ink-muted">{t("matchday.report.captainsOnly")}</p>
           )}
         </section>
 
         {match.stats && match.stats.length > 0 && <MatchStatsTable stats={match.stats} />}
-        <MatchChat matchId={match.id} messages={messages} />
+        <VodBox key={match.vodUrl ?? ""} matchId={match.id} vodUrl={match.vodUrl} canEdit={moderator} />
+        {canSeePrivate && <MatchChat matchId={match.id} messages={messages} />}
       </div>
     </main>
   );

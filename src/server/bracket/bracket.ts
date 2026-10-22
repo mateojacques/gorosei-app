@@ -94,6 +94,7 @@ export type MatchView = {
   lobby: { name: string; password: string } | null;
   riotMatchIds: string[];
   stats: MatchStats[] | null;
+  vodUrl: string | null;
 };
 
 async function loadTeams(tx: Executor, registrationIds: string[]): Promise<Map<string, MatchTeam>> {
@@ -163,6 +164,7 @@ export async function getMatchView(
     lobby: priv && match.lobbyName !== null ? { name: match.lobbyName, password: match.lobbyPassword ?? "" } : null,
     riotMatchIds: match.riotMatchIds,
     stats: (match.stats as MatchStats[] | null) ?? null,
+    vodUrl: match.vodUrl,
   };
 }
 

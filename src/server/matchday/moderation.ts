@@ -322,3 +322,40 @@ export async function swapPlayer(
   if (committed.ok) announceTournament(row.tournament.id);
   return committed;
 }
+
+const MAX_VOD_URL = 300;
+
+function validVodUrl(url: string): boolean {
+  if (url.length > MAX_VOD_URL) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && parsed.hostname.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Sets (or, with null, clears) the match's VOD link; https only. */
+export async function setMatchVod(
+  db: Db,
+  moderatorId: string,
+  matchId: string,
+  url: string | null,
+): Promise<{ ok: true } | { ok: false; reason: "not_found" | "invalid_url" }> {
+  const value = url === null ? null : url.trim();
+  if (value !== null && !validVodUrl(value)) return { ok: false, reason: "invalid_url" };
+  const committed = await db.transaction(async (tx) => {
+    const [updated] = await tx.update(matches).set({ vodUrl: value }).where(eq(matches.id, matchId)).returning({ tournamentId: matches.tournamentId });
+    if (!updated) return { ok: false, reason: "not_found" } as const;
+    await writeAudit(tx, {
+      actorUserId: moderatorId,
+      action: "match.vod_set",
+      entityType: "match",
+      entityId: matchId,
+      data: { tournamentId: updated.tournamentId, url: value },
+    });
+    return { ok: true } as const;
+  });
+  if (committed.ok) void announceMatch(db, matchId);
+  return committed;
+}
