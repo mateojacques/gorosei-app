@@ -1,5 +1,5 @@
 import { notFound } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { DIVISIONS, TIERS } from "../../shared/rank";
@@ -7,12 +7,13 @@ import { tournamentInputSchema } from "../../shared/tournament";
 
 // Server-only modules are imported inside handlers so they never reach the client bundle.
 // Anyone who isn't an admin gets the ordinary not-found page: the admin area never admits it exists.
-export async function requireAdmin() {
+// Server-only so the request-headers import never reaches the client bundle.
+export const requireAdmin = createServerOnlyFn(async () => {
   const { getSessionUser } = await import("../auth");
   const user = await getSessionUser(getRequestHeaders());
   if (!user || user.role !== "admin") throw notFound();
   return user;
-}
+});
 
 async function deps() {
   const [{ db }, tournaments, credits, registrations] = await Promise.all([

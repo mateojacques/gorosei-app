@@ -20,11 +20,13 @@ import { Route as ApiSplatRouteImport } from './routes/api.$'
 import { Route as EquiposSlugRouteImport } from './routes/equipos.$slug'
 import { Route as EquiposNuevoRouteImport } from './routes/equipos.nuevo'
 import { Route as JugadorRiotIdRouteImport } from './routes/jugador.$riotId'
+import { Route as OgDefaultDotpngRouteImport } from './routes/og.default[.]png'
 import { Route as PartidasMatchIdRouteImport } from './routes/partidas.$matchId'
 import { Route as TorneosSlugRouteImport } from './routes/torneos.$slug'
 import { Route as AdminTorneosIndexRouteImport } from './routes/admin.torneos.index'
 import { Route as AdminTorneosIdRouteImport } from './routes/admin.torneos.$id'
 import { Route as AdminTorneosNuevoRouteImport } from './routes/admin.torneos.nuevo'
+import { Route as OgTorneosSlugRouteImport } from './routes/og.torneos.$slug'
 import { Route as TorneosSlugAgentesLibresRouteImport } from './routes/torneos.$slug_.agentes-libres'
 import { Route as TorneosSlugInscribirRouteImport } from './routes/torneos.$slug_.inscribir'
 import { Route as TorneosSlugEquiposTeamSlugRouteImport } from './routes/torneos.$slug_.equipos.$teamSlug'
@@ -84,6 +86,11 @@ const JugadorRiotIdRoute = JugadorRiotIdRouteImport.update({
   path: '/jugador/$riotId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OgDefaultDotpngRoute = OgDefaultDotpngRouteImport.update({
+  id: '/og/default.png',
+  path: '/og/default.png',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PartidasMatchIdRoute = PartidasMatchIdRouteImport.update({
   id: '/partidas/$matchId',
   path: '/partidas/$matchId',
@@ -108,6 +115,11 @@ const AdminTorneosNuevoRoute = AdminTorneosNuevoRouteImport.update({
   id: '/torneos/nuevo',
   path: '/torneos/nuevo',
   getParentRoute: () => AdminRoute,
+} as any)
+const OgTorneosSlugRoute = OgTorneosSlugRouteImport.update({
+  id: '/og/torneos/$slug',
+  path: '/og/torneos/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const TorneosSlugAgentesLibresRoute =
   TorneosSlugAgentesLibresRouteImport.update({
@@ -139,10 +151,12 @@ export interface FileRoutesByFullPath {
   '/equipos/$slug': typeof EquiposSlugRoute
   '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
+  '/og/default.png': typeof OgDefaultDotpngRoute
   '/partidas/$matchId': typeof PartidasMatchIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
   '/admin/torneos/$id': typeof AdminTorneosIdRoute
   '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
+  '/og/torneos/$slug': typeof OgTorneosSlugRoute
   '/torneos/$slug/agentes-libres': typeof TorneosSlugAgentesLibresRoute
   '/torneos/$slug/inscribir': typeof TorneosSlugInscribirRoute
   '/admin/torneos/': typeof AdminTorneosIndexRoute
@@ -160,10 +174,12 @@ export interface FileRoutesByTo {
   '/equipos/$slug': typeof EquiposSlugRoute
   '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
+  '/og/default.png': typeof OgDefaultDotpngRoute
   '/partidas/$matchId': typeof PartidasMatchIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
   '/admin/torneos/$id': typeof AdminTorneosIdRoute
   '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
+  '/og/torneos/$slug': typeof OgTorneosSlugRoute
   '/torneos/$slug/agentes-libres': typeof TorneosSlugAgentesLibresRoute
   '/torneos/$slug/inscribir': typeof TorneosSlugInscribirRoute
   '/admin/torneos': typeof AdminTorneosIndexRoute
@@ -182,10 +198,12 @@ export interface FileRoutesById {
   '/equipos/$slug': typeof EquiposSlugRoute
   '/equipos/nuevo': typeof EquiposNuevoRoute
   '/jugador/$riotId': typeof JugadorRiotIdRoute
+  '/og/default.png': typeof OgDefaultDotpngRoute
   '/partidas/$matchId': typeof PartidasMatchIdRoute
   '/torneos/$slug': typeof TorneosSlugRoute
   '/admin/torneos/$id': typeof AdminTorneosIdRoute
   '/admin/torneos/nuevo': typeof AdminTorneosNuevoRoute
+  '/og/torneos/$slug': typeof OgTorneosSlugRoute
   '/torneos/$slug_/agentes-libres': typeof TorneosSlugAgentesLibresRoute
   '/torneos/$slug_/inscribir': typeof TorneosSlugInscribirRoute
   '/admin/torneos/': typeof AdminTorneosIndexRoute
@@ -205,10 +223,12 @@ export interface FileRouteTypes {
     | '/equipos/$slug'
     | '/equipos/nuevo'
     | '/jugador/$riotId'
+    | '/og/default.png'
     | '/partidas/$matchId'
     | '/torneos/$slug'
     | '/admin/torneos/$id'
     | '/admin/torneos/nuevo'
+    | '/og/torneos/$slug'
     | '/torneos/$slug/agentes-libres'
     | '/torneos/$slug/inscribir'
     | '/admin/torneos/'
@@ -226,10 +246,12 @@ export interface FileRouteTypes {
     | '/equipos/$slug'
     | '/equipos/nuevo'
     | '/jugador/$riotId'
+    | '/og/default.png'
     | '/partidas/$matchId'
     | '/torneos/$slug'
     | '/admin/torneos/$id'
     | '/admin/torneos/nuevo'
+    | '/og/torneos/$slug'
     | '/torneos/$slug/agentes-libres'
     | '/torneos/$slug/inscribir'
     | '/admin/torneos'
@@ -247,10 +269,12 @@ export interface FileRouteTypes {
     | '/equipos/$slug'
     | '/equipos/nuevo'
     | '/jugador/$riotId'
+    | '/og/default.png'
     | '/partidas/$matchId'
     | '/torneos/$slug'
     | '/admin/torneos/$id'
     | '/admin/torneos/nuevo'
+    | '/og/torneos/$slug'
     | '/torneos/$slug_/agentes-libres'
     | '/torneos/$slug_/inscribir'
     | '/admin/torneos/'
@@ -269,8 +293,10 @@ export interface RootRouteChildren {
   EquiposSlugRoute: typeof EquiposSlugRoute
   EquiposNuevoRoute: typeof EquiposNuevoRoute
   JugadorRiotIdRoute: typeof JugadorRiotIdRoute
+  OgDefaultDotpngRoute: typeof OgDefaultDotpngRoute
   PartidasMatchIdRoute: typeof PartidasMatchIdRoute
   TorneosSlugRoute: typeof TorneosSlugRoute
+  OgTorneosSlugRoute: typeof OgTorneosSlugRoute
   TorneosSlugAgentesLibresRoute: typeof TorneosSlugAgentesLibresRoute
   TorneosSlugInscribirRoute: typeof TorneosSlugInscribirRoute
   TorneosSlugEquiposTeamSlugRoute: typeof TorneosSlugEquiposTeamSlugRoute
@@ -355,6 +381,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JugadorRiotIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/og/default.png': {
+      id: '/og/default.png'
+      path: '/og/default.png'
+      fullPath: '/og/default.png'
+      preLoaderRoute: typeof OgDefaultDotpngRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/partidas/$matchId': {
       id: '/partidas/$matchId'
       path: '/partidas/$matchId'
@@ -389,6 +422,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/torneos/nuevo'
       preLoaderRoute: typeof AdminTorneosNuevoRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/og/torneos/$slug': {
+      id: '/og/torneos/$slug'
+      path: '/og/torneos/$slug'
+      fullPath: '/og/torneos/$slug'
+      preLoaderRoute: typeof OgTorneosSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/torneos/$slug_/agentes-libres': {
       id: '/torneos/$slug_/agentes-libres'
@@ -440,8 +480,10 @@ const rootRouteChildren: RootRouteChildren = {
   EquiposSlugRoute: EquiposSlugRoute,
   EquiposNuevoRoute: EquiposNuevoRoute,
   JugadorRiotIdRoute: JugadorRiotIdRoute,
+  OgDefaultDotpngRoute: OgDefaultDotpngRoute,
   PartidasMatchIdRoute: PartidasMatchIdRoute,
   TorneosSlugRoute: TorneosSlugRoute,
+  OgTorneosSlugRoute: OgTorneosSlugRoute,
   TorneosSlugAgentesLibresRoute: TorneosSlugAgentesLibresRoute,
   TorneosSlugInscribirRoute: TorneosSlugInscribirRoute,
   TorneosSlugEquiposTeamSlugRoute: TorneosSlugEquiposTeamSlugRoute,

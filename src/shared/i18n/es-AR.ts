@@ -720,4 +720,10 @@ export const esAR = {
   "placement.none": "Sin puesto",
   "team.history": "Historial",
   "team.noHistory": "Este equipo todavía no jugó ningún torneo.",
+  "og.prizeLabel": "Premio para el campeón",
+  "og.prizeWon": "Premio del campeón",
+  "og.champion": "Campeón",
+  "og.default.title": "Copa",
+  "og.default.titleLine2": "Semanal",
+  "og.default.caption": "Torneos semanales 5v5",
 } as const;
