@@ -12,5 +12,6 @@ export function startRealtime(): void {
     port: env.REALTIME_PORT,
     authenticate: getSessionUser,
     canSubscribe: canSubscribe(db),
+    allowedOrigins: [new URL(env.BETTER_AUTH_URL).origin],
   });
 }

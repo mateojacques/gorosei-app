@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { request as httpRequest } from "node:http";
 import WebSocket from "ws";
 import type { SessionUser } from "../../../src/server/auth";
 import { publish } from "../../../src/server/realtime/hub";
@@ -79,4 +80,38 @@ test("close() drops connections", async () => {
   await server.close();
   await closed;
   expect(ws.readyState).toBe(WebSocket.CLOSED);
+});
+
+/** Raw upgrade request, so the Origin header is exactly what the test says. */
+async function upgradeStatus(port: number, origin?: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const req = httpRequest({
+      port,
+      headers: {
+        Connection: "Upgrade",
+        Upgrade: "websocket",
+        "Sec-WebSocket-Version": "13",
+        "Sec-WebSocket-Key": Buffer.from("0123456789abcdef").toString("base64"),
+        ...(origin ? { Origin: origin } : {}),
+      },
+    });
+    req.on("upgrade", (res, socket) => (socket.destroy(), resolve(res.statusCode ?? 0)));
+    req.on("response", (res) => resolve(res.statusCode ?? 0));
+    req.on("error", () => resolve(0));
+    req.end();
+  });
+}
+
+test("a cross-site origin cannot open a connection, while the site's own origin and non-browser clients can", async () => {
+  const server = startRealtimeServer({
+    port: 0,
+    authenticate: async () => mod,
+    canSubscribe: async () => true,
+    allowedOrigins: ["https://gorosei.example"],
+  });
+  await server.ready;
+  closers.push(() => server.close());
+  expect(await upgradeStatus(server.port, "https://evil.example")).not.toBe(101);
+  expect(await upgradeStatus(server.port, "https://gorosei.example")).toBe(101);
+  expect(await upgradeStatus(server.port)).toBe(101);
 });

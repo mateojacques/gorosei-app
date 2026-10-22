@@ -16,6 +16,8 @@ export function startRealtimeServer(opts: {
   port: number;
   authenticate: (headers: Headers) => Promise<SessionUser | null>;
   canSubscribe: ChannelAccess;
+  /** Browser origins allowed to connect; a request with no Origin header (not a browser) is always allowed. */
+  allowedOrigins?: string[];
 }): { close(): Promise<void>; readonly port: number; ready: Promise<void> } {
   const http = createServer((_req, res) => {
     res.writeHead(426).end();
@@ -23,6 +25,13 @@ export function startRealtimeServer(opts: {
   const wss = new WebSocketServer({ noServer: true });
 
   http.on("upgrade", (request, socket, head) => {
+    // The session cookie authenticates the upgrade, so another site must not be able to open a socket as the visitor.
+    const origin = request.headers.origin;
+    if (opts.allowedOrigins && origin && !opts.allowedOrigins.includes(origin)) {
+      socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
     const headers = new Headers();
     for (const [key, value] of Object.entries(request.headers)) {
       if (value !== undefined) headers.set(key, Array.isArray(value) ? value.join(", ") : value);
