@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { announceMatch } from "./events";
 import { type ReportInput, type MatchStatus, validateScore } from "../../shared/match";
 import { writeAudit } from "../audit";
 import type { Db, Executor } from "../db/client";
@@ -24,7 +25,7 @@ export async function postLobby(
   matchId: string,
   lobby: { name: string; password: string },
 ): Promise<{ ok: true } | { ok: false; reason: ReportRejection }> {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const match = await lockMatch(tx, matchId);
     if (!match) return { ok: false, reason: "not_found" } as const;
     if (match.lobbyName !== null) return { ok: false, reason: "lobby_exists" } as const;
@@ -43,6 +44,8 @@ export async function postLobby(
     });
     return { ok: true } as const;
   });
+  if (result.ok) void announceMatch(db, matchId);
+  return result;
 }
 
 const REPORTABLE: MatchStatus[] = ["open", "in_progress", "reported", "disputed"];
@@ -53,7 +56,7 @@ export async function reportResult(
   matchId: string,
   input: ReportInput,
 ): Promise<{ ok: true; status: "in_progress" | "reported" | "disputed" } | { ok: false; reason: ReportRejection }> {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const match = await lockMatch(tx, matchId);
     if (!match) return { ok: false, reason: "not_found" } as const;
 
@@ -117,4 +120,6 @@ export async function reportResult(
     });
     return { ok: true, status } as const;
   });
+  if (result.ok) void announceMatch(db, matchId);
+  return result;
 }

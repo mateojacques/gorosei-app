@@ -1,7 +1,9 @@
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { startJobs } from "./server/jobs/boss";
+import { startRealtime } from "./server/realtime/start";
 
 startJobs()?.catch((error) => console.error("[jobs] failed to start", error));
+startRealtime();
 
 export default createServerEntry({
   fetch(request) {

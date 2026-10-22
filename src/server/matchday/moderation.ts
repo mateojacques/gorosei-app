@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { announceMatch, announceTournament } from "./events";
 import type { EligibilityFailure, RosterEntry } from "../../shared/eligibility";
 import { validateScore } from "../../shared/match";
 import { writeAudit } from "../audit";
@@ -81,7 +82,7 @@ export async function confirmMatch(
   matchId: string,
   result?: { score1: number; score2: number },
 ): Promise<{ ok: true; finished: boolean } | Reject> {
-  return db.transaction(async (tx) => {
+  const committed = await db.transaction(async (tx) => {
     const locked = await lockBoth(tx, matchId);
     if (failed(locked)) return locked;
     const { tournament, match } = locked;
@@ -119,6 +120,8 @@ export async function confirmMatch(
     });
     return { ok: true, finished } as const;
   });
+  if (committed.ok) void announceMatch(db, matchId);
+  return committed;
 }
 
 export async function forfeitMatch(
@@ -127,7 +130,7 @@ export async function forfeitMatch(
   matchId: string,
   forfeitingRegistrationId: string,
 ): Promise<{ ok: true; finished: boolean } | Reject> {
-  return db.transaction(async (tx) => {
+  const committed = await db.transaction(async (tx) => {
     const locked = await lockBoth(tx, matchId);
     if (failed(locked)) return locked;
     const { tournament, match } = locked;
@@ -151,10 +154,12 @@ export async function forfeitMatch(
     });
     return { ok: true, finished } as const;
   });
+  if (committed.ok) void announceMatch(db, matchId);
+  return committed;
 }
 
 export async function resetMatch(db: Db, moderatorId: string, matchId: string): Promise<{ ok: true } | Reject> {
-  return db.transaction(async (tx) => {
+  const committed = await db.transaction(async (tx) => {
     const locked = await lockBoth(tx, matchId);
     if (failed(locked)) return locked;
     const { tournament, match } = locked;
@@ -210,6 +215,8 @@ export async function resetMatch(db: Db, moderatorId: string, matchId: string): 
     });
     return { ok: true } as const;
   });
+  if (committed.ok) void announceMatch(db, matchId);
+  return committed;
 }
 
 export async function swapPlayer(
@@ -229,7 +236,7 @@ export async function swapPlayer(
   const snapshot = await snapshotWithAccount(deps, inUserId, row.tournament.rankSource);
   if (!snapshot) return { ok: false, reason: "riot_required" };
 
-  return db.transaction(async (tx) => {
+  const committed = await db.transaction(async (tx) => {
     const tournament = await lockTournament(tx, row.tournament.id);
     const [registration] = await tx.select().from(registrations).where(eq(registrations.id, registrationId)).for("update");
     if (
@@ -312,4 +319,6 @@ export async function swapPlayer(
     });
     return { ok: true } as const;
   });
+  if (committed.ok) announceTournament(row.tournament.id);
+  return committed;
 }

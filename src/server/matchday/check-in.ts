@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
+import { announceRegistration, announceTournament } from "./events";
 import { type CheckInOutcome, type ShortHandedDecision, checkInOutcome, checkInWindow } from "../../shared/check-in";
 import { writeAudit } from "../audit";
 import type { Db, Executor } from "../db/client";
@@ -25,7 +26,7 @@ async function registrationTournamentId(tx: Executor, registrationId: string): P
 }
 
 export async function checkIn(db: Db, userId: string, registrationId: string, now: Date): Promise<Result> {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const tournamentId = await registrationTournamentId(tx, registrationId);
     if (!tournamentId) return { ok: false, reason: "invalid_state" } as const;
     const tournament = await lockTournament(tx, tournamentId);
@@ -59,6 +60,8 @@ export async function checkIn(db: Db, userId: string, registrationId: string, no
     }
     return { ok: true } as const;
   });
+  if (result.ok) announceRegistration(db, registrationId);
+  return result;
 }
 
 export async function decideShortHanded(
@@ -68,7 +71,7 @@ export async function decideShortHanded(
   decision: ShortHandedDecision,
   now: Date,
 ): Promise<Result> {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const tournamentId = await registrationTournamentId(tx, registrationId);
     if (!tournamentId) return { ok: false, reason: "invalid_state" } as const;
     const tournament = await lockTournament(tx, tournamentId);
@@ -90,6 +93,8 @@ export async function decideShortHanded(
     });
     return { ok: true } as const;
   });
+  if (result.ok) announceRegistration(db, registrationId);
+  return result;
 }
 
 export type CheckInView = {
@@ -148,7 +153,7 @@ export async function openCheckIn(
   actorUserId: string | null,
   opts: { force?: boolean } = {},
 ): Promise<{ ok: true } | { ok: false; reason: "invalid_state" | "too_early" }> {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const tournament = await lockTournament(tx, tournamentId);
     if (tournament?.status !== "registration_closed") return { ok: false, reason: "invalid_state" } as const;
     if (!opts.force && now < checkInWindow(tournament.startsAt).opensAt) return { ok: false, reason: "too_early" } as const;
@@ -162,6 +167,8 @@ export async function openCheckIn(
     });
     return { ok: true } as const;
   });
+  if (result.ok) announceTournament(tournamentId);
+  return result;
 }
 
 export async function closeCheckIn(
@@ -174,7 +181,7 @@ export async function closeCheckIn(
   | { ok: true; outcome: "live" | "cancelled"; forfeited: number; teams: number }
   | { ok: false; reason: "invalid_state" | "too_early" }
 > {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const tournament = await lockTournament(tx, tournamentId);
     if (tournament?.status !== "check_in") return { ok: false, reason: "invalid_state" } as const;
     if (!opts.force && now < checkInWindow(tournament.startsAt).closesAt) return { ok: false, reason: "too_early" } as const;
@@ -248,4 +255,6 @@ export async function closeCheckIn(
     });
     return { ok: true, outcome: "live", forfeited, teams: regs.length } as const;
   });
+  if (result.ok) announceTournament(tournamentId);
+  return result;
 }

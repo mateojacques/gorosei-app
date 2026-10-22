@@ -8,6 +8,7 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.string().url(),
   DISCORD_CLIENT_ID: z.string().min(1).optional(),
   DISCORD_CLIENT_SECRET: z.string().min(1).optional(),
+  REALTIME_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
 });
 
 export type Env = z.infer<typeof envSchema>;

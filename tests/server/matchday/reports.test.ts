@@ -2,6 +2,7 @@ import { beforeEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { auditLog, matchMessages, matchReports, matches } from "../../../src/server/db/schema";
 import { getMatchView } from "../../../src/server/bracket/bracket";
+import { subscribe } from "../../../src/server/realtime/hub";
 import { postLobby, reportResult } from "../../../src/server/matchday/reports";
 import { createTestUser, resetTestDb, testDb } from "../../helpers/db";
 import { startedTestTournament } from "../../helpers/competition";
@@ -122,4 +123,14 @@ test("getMatchView hides lobby and reports from outsiders and delays are flagged
   const late = await getMatchView(testDb, match.id, null, new Date(match.openedAt!.getTime() + 61 * 60_000));
   expect(late!.delayed).toBe(true);
   expect(view!.teams[0]).toMatchObject({ registrationId: match.reg1Id });
+});
+
+test("a report publishes on the match, tournament and console channels after commit", async () => {
+  const { tournament, match, a } = await setup();
+  const seen: string[] = [];
+  const offs = [`match:${match.id}`, `tournament:${tournament.id}`, "console"].map((c) => subscribe(c, (e) => seen.push(`${e.channel}/${e.type}`)));
+  await reportResult(testDb, a.captain, match.id, report(1, 0));
+  for (let i = 0; i < 50 && seen.length < 3; i++) await new Promise((r) => setTimeout(r, 10));
+  for (const off of offs) off();
+  expect(seen.sort()).toEqual(["console/queue", `match:${match.id}/updated`, `tournament:${tournament.id}/updated`].sort());
 });
