@@ -1,6 +1,6 @@
 import { BracketsManager } from "brackets-manager";
 import { InMemoryDatabase } from "brackets-memory-db";
-import { type Database, Status } from "brackets-model";
+import { type Database, type Id, Status } from "brackets-model";
 import type { MatchPhase } from "../../shared/match";
 
 export type BracketData = Database;
@@ -66,27 +66,27 @@ export async function createBracket(
         ? { grandFinal: "double", seedOrdering: ["inner_outer"], balanceByes: true }
         : { consolationFinal: true, seedOrdering: ["inner_outer"], balanceByes: true },
   });
-  return { data: await manager.export(), stageId: stage.id };
+  return { data: await manager.export(), stageId: Number(stage.id) };
 }
 
 export function listEngineMatches(data: BracketData): EngineMatch[] {
-  const names = new Map(data.participant.map((p) => [p.id, p.name]));
+  const names = new Map<Id, string>(data.participant.map((p) => [p.id, p.name]));
   const groups = new Map(data.group.map((g) => [g.id, g]));
   const rounds = new Map(data.round.map((r) => [r.id, r]));
   const stages = new Map(data.stage.map((s) => [s.id, s]));
-  const lastRound = new Map<number, number>();
+  const lastRound = new Map<Id, number>();
   for (const r of data.round) lastRound.set(r.group_id, Math.max(lastRound.get(r.group_id) ?? 0, r.number));
 
   // brackets-manager leaves the reset match `ready` when the winners-bracket team takes grand final 1;
   // a reset match is moot (archived) in that case.
-  const grandFinalWonByWinnersSide = new Set<number>();
+  const grandFinalWonByWinnersSide = new Set<Id>();
   for (const m of data.match) {
     const g = groups.get(m.group_id);
     const r = rounds.get(m.round_id);
-    if (g && r && g.number === 3 && r.number === 1 && m.opponent1?.result === "win") grandFinalWonByWinnersSide.add(m.stage_id as number);
+    if (g && r && g.number === 3 && r.number === 1 && m.opponent1?.result === "win") grandFinalWonByWinnersSide.add(m.stage_id);
   }
 
-  const name = (id: number | null | undefined) => (id == null ? null : (names.get(id) ?? null));
+  const name = (id: Id | null | undefined) => (id == null ? null : (names.get(id) ?? null));
 
   return data.match.map((m) => {
     const group = groups.get(m.group_id);
@@ -102,11 +102,11 @@ export function listEngineMatches(data: BracketData): EngineMatch[] {
       phase = round.number === lastRound.get(group.id) ? "final" : "main";
     }
     const bye = m.opponent1 === null || m.opponent2 === null;
-    const moot = phase === "reset" && grandFinalWonByWinnersSide.has(m.stage_id as number);
+    const moot = phase === "reset" && grandFinalWonByWinnersSide.has(m.stage_id);
     const status = bye || moot ? "archived" : (STATUS_NAMES[m.status] ?? "locked");
     const winner = m.opponent1?.result === "win" ? name(m.opponent1.id) : m.opponent2?.result === "win" ? name(m.opponent2.id) : null;
     return {
-      id: m.id as number,
+      id: Number(m.id),
       group: group.number,
       round: round.number,
       number: m.number,
