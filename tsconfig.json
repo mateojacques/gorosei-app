@@ -3,6 +3,7 @@
     "src",
     "tests",
     "e2e",
+    "scripts",
     "*.ts"
   ],
   "compilerOptions": {
