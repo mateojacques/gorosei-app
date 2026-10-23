@@ -102,6 +102,8 @@ export type MatchView = {
   reports: { registrationId: string; score1: number; score2: number; screenshotUrl: string | null }[];
   lobby: { name: string; password: string } | null;
   tournamentCode: string | null;
+  /** Games won per side according to Riot; private like the reports. */
+  riotScore: { score1: number; score2: number } | null;
   riotMatchIds: string[];
   stats: MatchStats[] | null;
   vodUrl: string | null;
@@ -173,6 +175,7 @@ export async function getMatchView(
     reports,
     lobby: priv && match.lobbyName !== null ? { name: match.lobbyName, password: match.lobbyPassword ?? "" } : null,
     tournamentCode: priv ? match.tournamentCode : null,
+    riotScore: priv ? match.riotScore : null,
     riotMatchIds: match.riotMatchIds,
     stats: (match.stats as MatchStats[] | null) ?? null,
     vodUrl: match.vodUrl,

@@ -91,11 +91,15 @@ export async function confirmMatch(
     if (tournament.status !== "live" || !PLAYABLE.includes(match.status)) return { ok: false, reason: "invalid_state" } as const;
 
     let score: { score1: number; score2: number };
-    let source: "override" | "reports";
+    let source: "override" | "riot" | "reports";
     if (result) {
       if (!validateScore(match.bestOf, result.score1, result.score2)) return { ok: false, reason: "invalid_score" } as const;
       score = result;
       source = "override";
+    } else if (match.riotScore && validateScore(match.bestOf, match.riotScore.score1, match.riotScore.score2)) {
+      // Riot result callbacks decided the match; the moderator confirming is the check.
+      score = match.riotScore;
+      source = "riot";
     } else {
       const reports = await tx.select().from(matchReports).where(eq(matchReports.matchId, matchId));
       const first = reports[0];
@@ -197,6 +201,7 @@ export async function resetMatch(db: Db, moderatorId: string, matchId: string): 
         lobbyPassword: null,
         lobbyPostedBy: null,
         tournamentCode: null,
+        riotScore: null,
         score1: null,
         score2: null,
         winnerRegId: null,

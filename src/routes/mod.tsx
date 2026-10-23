@@ -52,11 +52,13 @@ function MatchWork({ selected }: { selected: Selected }) {
   const { match, tournament, messages } = selected;
   const id = useId();
   const { run, error, notice, pending } = useMatchAction();
-  const [score1, setScore1] = useState("0");
-  const [score2, setScore2] = useState("0");
+  // Riot result callbacks pre-fill the score; the moderator still decides.
+  const [score1, setScore1] = useState(String(match.riotScore?.score1 ?? 0));
+  const [score2, setScore2] = useState(String(match.riotScore?.score2 ?? 0));
   const [a, b] = match.teams;
   const live = match.status !== "completed" && match.status !== "waiting";
-  const canConfirm = live && match.reports.length > 0 && match.status !== "disputed";
+  // With a Riot score, confirming uses it even while the captains disagree.
+  const canConfirm = live && (match.riotScore !== null || (match.reports.length > 0 && match.status !== "disputed"));
   const finishedNote = (result: { finished: boolean }) => (result.finished ? t("console.finished") : t("console.done"));
   const max = Math.ceil(match.bestOf / 2);
 
@@ -87,6 +89,11 @@ function MatchWork({ selected }: { selected: Selected }) {
           <h2 id={`${id}-o`} className="font-display text-2xl font-extrabold uppercase">
             {t("console.override.title")}
           </h2>
+          {match.riotScore && (
+            <p className="max-w-prose text-ink-muted">
+              {t("console.override.riot", { score: `${match.riotScore.score1}-${match.riotScore.score2}` })}
+            </p>
+          )}
           <form
             method="post"
             className="flex max-w-md flex-col gap-4"

@@ -43,3 +43,16 @@ test("tournament codes are issued every minute only with the capability on", asy
   await registerJobs(boss, { tournamentCodes: true });
   expect(queues).toContain("issue-tournament-codes");
 });
+
+test("Riot game results get a worker only with result callbacks on", async () => {
+  const queues: string[] = [];
+  const boss = {
+    createQueue: async (name: string) => void queues.push(name),
+    schedule: async () => {},
+    work: async () => "worker-id",
+  } as unknown as PgBoss;
+  await registerJobs(boss, { tournamentCodes: true, resultCallbacks: false });
+  expect(queues).not.toContain("riot-game-result");
+  await registerJobs(boss, { tournamentCodes: true, resultCallbacks: true });
+  expect(queues).toContain("riot-game-result");
+});

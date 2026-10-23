@@ -64,6 +64,8 @@ export const matches = pgTable(
     confirmedAt: tz("confirmed_at"),
     riotMatchIds: jsonb("riot_match_ids").$type<string[]>().notNull().default([]),
     stats: jsonb("stats").$type<unknown>(),
+    // Games won per side according to Riot match data (result callbacks); a moderator still confirms.
+    riotScore: jsonb("riot_score").$type<{ score1: number; score2: number }>(),
     // A moderator-set https link to the recorded broadcast of this match.
     vodUrl: text("vod_url"),
   },

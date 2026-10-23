@@ -2,7 +2,9 @@ import { PgBoss } from "pg-boss";
 import { db } from "../db/client";
 import { env } from "../env";
 import { createLogMailer, createResendMailer } from "../email/mailer";
+import { attachVerifiedRiotMatchIds } from "../matchday/stats";
 import { issueTournamentCodes, riotCallbackUrl } from "../matchday/tournament-codes";
+import { RIOT_GAME_RESULT, type RiotGameJob } from "../riot/callback";
 import { riot } from "../riot";
 import { type RiotFeatures, features } from "../riot/features";
 import { createRiotTournamentClient } from "../riot/tournament-client";
@@ -23,7 +25,10 @@ const SEND_EMAILS = "send-emails";
 const ISSUE_TOURNAMENT_CODES = "issue-tournament-codes";
 const EVERY_MINUTE = "* * * * *";
 
-export async function registerJobs(boss: PgBoss, riotFeatures: Pick<RiotFeatures, "tournamentCodes"> = features): Promise<void> {
+export async function registerJobs(
+  boss: PgBoss,
+  riotFeatures: Pick<RiotFeatures, "tournamentCodes"> & Partial<Pick<RiotFeatures, "resultCallbacks">> = features,
+): Promise<void> {
   await boss.createQueue(POLL_RANKS);
   await boss.schedule(POLL_RANKS, EVERY_SIX_HOURS);
   await boss.work(POLL_RANKS, async () => {
@@ -68,6 +73,20 @@ export async function registerJobs(boss: PgBoss, riotFeatures: Pick<RiotFeatures
     await boss.work(ISSUE_TOURNAMENT_CODES, async () => {
       const result = await issueTournamentCodes({ db, client, callbackUrl }, new Date());
       console.info(`[jobs] ${ISSUE_TOURNAMENT_CODES}: issued ${result.issued}, failed ${result.failed}`);
+    });
+  }
+  // A result callback queues one job per game; the game may not be in match-v5 yet, so the job retries.
+  if (riotFeatures.resultCallbacks) {
+    await boss.createQueue(RIOT_GAME_RESULT);
+    await boss.work<RiotGameJob>(RIOT_GAME_RESULT, async (jobs) => {
+      for (const { data } of jobs) {
+        const result = await attachVerifiedRiotMatchIds({ db, riot }, null, data.matchId, [data.riotMatchId]);
+        if (result.ok) continue;
+        if (result.reason === "invalid_id" || result.reason === "riot_unavailable") {
+          throw new Error(`${RIOT_GAME_RESULT}: ${data.riotMatchId} ${result.reason}, retrying`);
+        }
+        console.warn(`[jobs] ${RIOT_GAME_RESULT}: ${data.riotMatchId} for match ${data.matchId} dropped: ${result.reason}`);
+      }
     });
   }
 }

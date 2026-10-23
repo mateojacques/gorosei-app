@@ -113,6 +113,13 @@
       "when": 1792714526885,
       "tag": "0015_plain_wong",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792714838866,
+      "tag": "0016_new_jean_grey",
+      "breakpoints": true
     }
   ]
 }

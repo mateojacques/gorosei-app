@@ -775,6 +775,7 @@ export const esAR = {
   "console.override.title": "Fijar el resultado a mano",
   "console.override.apply": "Fijar resultado",
   "console.override.score": "Puntos de {team}",
+  "console.override.riot": "Resultado de Riot: {score}. Ya está cargado abajo; confirmalo o corregilo.",
   "console.forfeit": "{team} pierde por W.O.",
   "console.reset": "Reiniciar partida",
   "console.sure": "¿Seguro? {action}",
