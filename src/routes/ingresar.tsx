@@ -9,8 +9,8 @@ import { t } from "../shared/i18n";
 import { NOINDEX_META } from "../shared/seo";
 
 const getAuthOptions = createServerFn({ method: "GET" }).handler(async () => {
-  const { isDiscordEnabled } = await import("../server/auth");
-  return { discord: isDiscordEnabled };
+  const { isDiscordEnabled, isRsoEnabled } = await import("../server/auth");
+  return { discord: isDiscordEnabled, rso: isRsoEnabled };
 });
 
 export const Route = createFileRoute("/ingresar")({
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/ingresar")({
 const AFTER_SIGN_IN = "/vincular-riot";
 
 function SignInPage() {
-  const { discord } = Route.useLoaderData();
+  const { discord, rso } = Route.useLoaderData();
   const navigate = useNavigate();
   const router = useRouter();
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
@@ -58,12 +58,28 @@ function SignInPage() {
           {t(mode === "signUp" ? "auth.signUp" : "auth.title")}
         </h1>
 
+        {rso && (
+          <>
+            {/* With Riot Sign On, Riot is the way in; email and Discord stay for accounts made before it. */}
+            <Button
+              type="button"
+              size="lg"
+              className="mt-8 w-full"
+              onClick={() => authClient.signIn.social({ provider: "riot", callbackURL: AFTER_SIGN_IN })}
+            >
+              {t("auth.riot")}
+            </Button>
+            <p className="mt-3 text-sm text-ink-muted">{t("auth.riotHint")}</p>
+            <h2 className="mt-12 font-display text-xl font-extrabold uppercase">{t("auth.existingAccount")}</h2>
+          </>
+        )}
+
         {discord && (
           <>
             <Button
               type="button"
               variant="secondary"
-              className="mt-8 w-full"
+              className={rso ? "mt-4 w-full" : "mt-8 w-full"}
               onClick={() => authClient.signIn.social({ provider: "discord", callbackURL: AFTER_SIGN_IN })}
             >
               {t("auth.discord")}
@@ -74,7 +90,7 @@ function SignInPage() {
           </>
         )}
 
-        <form onSubmit={onSubmit} className={`flex flex-col gap-5 ${discord ? "" : "mt-8"}`}>
+        <form onSubmit={onSubmit} className={`flex flex-col gap-5 ${discord ? "" : rso ? "mt-4" : "mt-8"}`}>
           {mode === "signUp" && (
             <Field id={`${id}-name`} label={t("auth.name")}>
               <Input id={`${id}-name`} name="name" required autoComplete="nickname" />
@@ -95,19 +111,21 @@ function SignInPage() {
             />
           </Field>
           {error && <FormAlert>{t("auth.failed")}</FormAlert>}
-          <Button type="submit" size="lg" disabled={pending} className="mt-1 w-full">
+          <Button type="submit" size="lg" variant={rso ? "secondary" : "primary"} disabled={pending} className="mt-1 w-full">
             {t(mode === "signUp" ? "auth.signUp" : "auth.signIn")}
           </Button>
         </form>
 
-        <Button
-          type="button"
-          variant="ghost"
-          className="mt-4 h-auto px-0 font-semibold"
-          onClick={() => setMode(mode === "signUp" ? "signIn" : "signUp")}
-        >
-          {t(mode === "signUp" ? "auth.haveAccount" : "auth.noAccount")}
-        </Button>
+        {!rso && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="mt-4 h-auto px-0 font-semibold"
+            onClick={() => setMode(mode === "signUp" ? "signIn" : "signUp")}
+          >
+            {t(mode === "signUp" ? "auth.haveAccount" : "auth.noAccount")}
+          </Button>
+        )}
       </div>
     </main>
   );

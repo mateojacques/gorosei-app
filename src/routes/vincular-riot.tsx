@@ -1,4 +1,5 @@
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
+import { authClient } from "../auth-client";
 import { type FormEvent, type ReactNode, useEffect, useId, useState } from "react";
 import {
   confirmRiotLinkFn,
@@ -49,6 +50,8 @@ function LinkRiotPage() {
       </Page>
     );
   }
+
+  if (state.rso) return <RsoLink />;
 
   async function onStart(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,6 +126,36 @@ function LinkRiotPage() {
       {error && (
         <div className="mt-5">
           <FormAlert>{error}</FormAlert>
+        </div>
+      )}
+    </Page>
+  );
+}
+
+/** With Riot Sign On the player links by signing in to Riot; the icon challenge is not offered. */
+function RsoLink() {
+  const [pending, setPending] = useState(false);
+  // Better Auth comes back to this page with ?error=… when Riot or the link was refused.
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(new URLSearchParams(window.location.search).has("error")), []);
+  return (
+    <Page>
+      <p className="mt-6 text-lg">{t("riotLink.rsoIntro")}</p>
+      <Button
+        type="button"
+        size="lg"
+        disabled={pending}
+        className="mt-6 w-full"
+        onClick={() => {
+          setPending(true);
+          void authClient.linkSocial({ provider: "riot", callbackURL: "/vincular-riot" }).finally(() => setPending(false));
+        }}
+      >
+        {t("riotLink.rso")}
+      </Button>
+      {failed && (
+        <div className="mt-5">
+          <FormAlert>{t("riotLink.rsoFailed")}</FormAlert>
         </div>
       )}
     </Page>

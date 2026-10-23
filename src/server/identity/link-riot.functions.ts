@@ -37,8 +37,10 @@ export const getRiotLinkState = createServerFn({ method: "GET" }).handler(async 
     .select({ requiredIconId: riotLinkChallenges.requiredIconId, expiresAt: riotLinkChallenges.expiresAt })
     .from(riotLinkChallenges)
     .where(eq(riotLinkChallenges.userId, user.id));
+  const { isRsoEnabled } = await import("../auth");
   return {
     signedIn: true as const,
+    rso: isRsoEnabled,
     linked: linked ?? null,
     challenge: challenge ? { ...challenge, iconUrl: await iconUrl(challenge.requiredIconId) } : null,
   };

@@ -107,6 +107,12 @@ export const esAR = {
   "auth.noAccount": "¿No tenés cuenta? Creala",
   "auth.failed": "No pudimos ingresar. Revisá tus datos.",
   "auth.signOut": "Cerrar sesión",
+  "auth.riot": "Entrar con Riot",
+  "auth.riotHint": "Con tu cuenta de Riot entrás y la cuenta queda vinculada en un paso.",
+  "auth.existingAccount": "¿Ya tenías cuenta?",
+  "riotLink.rsoIntro": "Ingresá con tu cuenta de Riot y la vinculamos. No hace falta cambiar el ícono.",
+  "riotLink.rso": "Vincular con Riot",
+  "riotLink.rsoFailed": "No pudimos vincular esa cuenta de Riot. Puede que ya esté vinculada a otro usuario, o que ya tengas otra vinculada.",
 
   "riotLink.title": "Vinculá tu cuenta de Riot",
   "riotLink.intro": "Ingresá tu Riot ID (nombre#tag) del servidor LAS.",
