@@ -35,6 +35,8 @@ export const tournaments = pgTable(
     streamUrl: text("stream_url").notNull(),
     // The recurring template this edition was created from; editing either never changes the other.
     templateId: uuid("template_id").references((): AnyPgColumn => tournamentTemplates.id),
+    // The Riot tournament-v5 tournament its match codes belong to, once one was created.
+    riotTournamentId: integer("riot_tournament_id"),
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id),

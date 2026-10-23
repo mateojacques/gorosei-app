@@ -705,6 +705,8 @@ export const esAR = {
   "matchday.lobby.title": "Sala",
   "matchday.lobby.name": "Nombre",
   "matchday.lobby.password": "Contraseña",
+  "matchday.lobby.code": "Código de torneo",
+  "matchday.lobby.codeHint": "Pegalo en el cliente (Jugar → ícono del trofeo) para entrar a la sala. Sirve para todas las partidas de la serie.",
   "matchday.lobby.none": "Todavía no hay sala. Un moderador la crea en el cliente y la publica acá.",
   "matchday.lobby.create": "Publicar sala",
   "matchday.lobby.createName": "Nombre de la sala",

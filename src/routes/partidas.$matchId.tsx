@@ -39,7 +39,7 @@ function MatchPage() {
           <MatchHeader match={match} tournament={tournament} />
         </div>
 
-        {canSeePrivate && match.status !== "waiting" && <LobbyBox matchId={match.id} lobby={match.lobby} canCreate={moderator} />}
+        {canSeePrivate && match.status !== "waiting" && <LobbyBox matchId={match.id} lobby={match.lobby} tournamentCode={match.tournamentCode} canCreate={moderator} />}
 
         <section aria-labelledby="result-h" className="flex flex-col gap-4">
           <h2 id="result-h" className="font-display text-2xl font-extrabold uppercase">

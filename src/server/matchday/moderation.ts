@@ -196,6 +196,7 @@ export async function resetMatch(db: Db, moderatorId: string, matchId: string): 
         lobbyName: null,
         lobbyPassword: null,
         lobbyPostedBy: null,
+        tournamentCode: null,
         score1: null,
         score2: null,
         winnerRegId: null,

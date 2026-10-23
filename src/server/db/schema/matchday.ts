@@ -54,6 +54,8 @@ export const matches = pgTable(
     lobbyName: text("lobby_name"),
     lobbyPassword: text("lobby_password"),
     lobbyPostedBy: text("lobby_posted_by").references(() => user.id),
+    // A Riot tournament code, used for every game of the match; private like the lobby.
+    tournamentCode: text("tournament_code"),
     openedAt: tz("opened_at"),
     score1: integer("score1"),
     score2: integer("score2"),

@@ -63,7 +63,7 @@ function MatchWork({ selected }: { selected: Selected }) {
   return (
     <div className="flex flex-col gap-8">
       <MatchHeader match={match} tournament={tournament} />
-      <LobbyBox matchId={match.id} lobby={match.lobby} canCreate={match.status === "open"} />
+      <LobbyBox matchId={match.id} lobby={match.lobby} tournamentCode={match.tournamentCode} canCreate={match.status === "open"} />
 
       <section aria-labelledby={`${id}-r`} className="flex flex-col gap-4">
         <h2 id={`${id}-r`} className="font-display text-2xl font-extrabold uppercase">

@@ -101,6 +101,7 @@ export type MatchView = {
   winnerRegistrationId: string | null;
   reports: { registrationId: string; score1: number; score2: number; screenshotUrl: string | null }[];
   lobby: { name: string; password: string } | null;
+  tournamentCode: string | null;
   riotMatchIds: string[];
   stats: MatchStats[] | null;
   vodUrl: string | null;
@@ -171,6 +172,7 @@ export async function getMatchView(
     winnerRegistrationId: match.winnerRegId,
     reports,
     lobby: priv && match.lobbyName !== null ? { name: match.lobbyName, password: match.lobbyPassword ?? "" } : null,
+    tournamentCode: priv ? match.tournamentCode : null,
     riotMatchIds: match.riotMatchIds,
     stats: (match.stats as MatchStats[] | null) ?? null,
     vodUrl: match.vodUrl,

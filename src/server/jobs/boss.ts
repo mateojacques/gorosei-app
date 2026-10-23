@@ -2,7 +2,10 @@ import { PgBoss } from "pg-boss";
 import { db } from "../db/client";
 import { env } from "../env";
 import { createLogMailer, createResendMailer } from "../email/mailer";
+import { issueTournamentCodes, riotCallbackUrl } from "../matchday/tournament-codes";
 import { riot } from "../riot";
+import { type RiotFeatures, features } from "../riot/features";
+import { createRiotTournamentClient } from "../riot/tournament-client";
 import { siteOrigin } from "../seo/origin";
 import { advanceTournaments } from "./advance-tournaments";
 import { sendCheckInReminders } from "./check-in-reminders";
@@ -17,9 +20,10 @@ const CLOSE_REGISTRATIONS = "close-registrations";
 const ADVANCE_TOURNAMENTS = "advance-tournaments";
 const CREATE_EDITIONS = "create-editions";
 const SEND_EMAILS = "send-emails";
+const ISSUE_TOURNAMENT_CODES = "issue-tournament-codes";
 const EVERY_MINUTE = "* * * * *";
 
-export async function registerJobs(boss: PgBoss): Promise<void> {
+export async function registerJobs(boss: PgBoss, riotFeatures: Pick<RiotFeatures, "tournamentCodes"> = features): Promise<void> {
   await boss.createQueue(POLL_RANKS);
   await boss.schedule(POLL_RANKS, EVERY_SIX_HOURS);
   await boss.work(POLL_RANKS, async () => {
@@ -55,6 +59,17 @@ export async function registerJobs(boss: PgBoss): Promise<void> {
     const result = await sendPendingEmails({ db, mailer, origin: siteOrigin(env.BETTER_AUTH_URL) }, new Date());
     console.info(`[jobs] ${SEND_EMAILS}: sent ${result.sent}, skipped ${result.skipped}, failed ${result.failed}`);
   });
+  // Riot tournament codes only exist with the capability on; without it moderators post lobbies.
+  if (riotFeatures.tournamentCodes) {
+    const client = createRiotTournamentClient({ apiKey: env.RIOT_API_KEY, stub: env.RIOT_TOURNAMENT_STUB });
+    const callbackUrl = riotCallbackUrl(siteOrigin(env.BETTER_AUTH_URL), features.resultCallbacks ? env.RIOT_CALLBACK_SECRET : undefined);
+    await boss.createQueue(ISSUE_TOURNAMENT_CODES);
+    await boss.schedule(ISSUE_TOURNAMENT_CODES, EVERY_MINUTE);
+    await boss.work(ISSUE_TOURNAMENT_CODES, async () => {
+      const result = await issueTournamentCodes({ db, client, callbackUrl }, new Date());
+      console.info(`[jobs] ${ISSUE_TOURNAMENT_CODES}: issued ${result.issued}, failed ${result.failed}`);
+    });
+  }
 }
 
 let started: Promise<PgBoss> | undefined;

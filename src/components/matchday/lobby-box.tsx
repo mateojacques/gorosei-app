@@ -6,14 +6,16 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useMatchAction } from "./action";
 
-/** The lobby the teams join. Moderators with no lobby yet get the form to publish one. */
+/** The lobby the teams join: a Riot tournament code when one was issued, else a moderator lobby (or its form). */
 export function LobbyBox({
   matchId,
   lobby,
+  tournamentCode = null,
   canCreate,
 }: {
   matchId: string;
   lobby: { name: string; password: string } | null;
+  tournamentCode?: string | null;
   canCreate: boolean;
 }) {
   const id = useId();
@@ -25,7 +27,13 @@ export function LobbyBox({
       <h2 id={`${id}-h`} className="font-display text-2xl font-extrabold uppercase">
         {t("matchday.lobby.title")}
       </h2>
-      {lobby ? (
+      {tournamentCode ? (
+        <div className="flex max-w-md flex-col gap-2">
+          <p className="text-ink-muted">{t("matchday.lobby.code")}</p>
+          <p className="font-display text-2xl font-extrabold tracking-wide [overflow-wrap:anywhere] select-all">{tournamentCode}</p>
+          <p className="max-w-prose text-sm text-ink-muted">{t("matchday.lobby.codeHint")}</p>
+        </div>
+      ) : lobby ? (
         <dl className="grid max-w-md grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-lg">
           <dt className="text-ink-muted">{t("matchday.lobby.name")}</dt>
           <dd className="font-semibold [overflow-wrap:anywhere] select-all">{lobby.name}</dd>
